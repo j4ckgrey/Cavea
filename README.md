@@ -88,14 +88,6 @@ Long filenames are truncated elegantly, with hover or click revealing full detai
 ## 💬 Community & Support
 
 - 🐞 **Bugs & Issues:** [GitHub Issues](https://github.com/j4ckgrey/Cavea/issues)  
-- 💡 **Discussions:** [GitHub Discussions](https://github.com/j4ckgrey/Cavea/discussions)  
-If you like my work and want to support development, consider buying me a coffee:
-👉 https://ko-fi.com/j4ckgrey
-Join the community and stay updated on Discord:  
-👉 https://discordapp.com/channels/1433689453158862943/1441378427239137300
+- 💡 **Discussions:** [GitHub Discussions](https://discordapp.com/channels/1433689453158862943/1441378427239137300)  
+- 💡 **Support:** If you like my work and want to support development, consider buying me a coffee:👉 https://ko-fi.com/j4ckgrey
 ---
-
-<p align="center">
-<img src="https://img.shields.io/badge/Platform-Jellyfin-blue?style=for-the-badge&logo=jellyfin" alt="Jellyfin Badge"/>
-<img src="https://img.shields.io/badge/Plugin-Cavea-orange?style=for-the-badge&logo=github" alt="Cavea Badge"/>
-</p>
