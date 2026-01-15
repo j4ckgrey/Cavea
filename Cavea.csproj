@@ -1,0 +1,82 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+  <TargetFramework>net9.0</TargetFramework>
+  <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyName>Cavea</AssemblyName>
+    <RootNamespace>Cavea</RootNamespace>
+    <!-- Do NOT copy framework/runtime assemblies into the plugin folder.
+         Leaving these out ensures the server's runtime assemblies are used
+         and avoids strong-name / public-key mismatches when loading the plugin. -->
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Exclude Gelato folder from build -->
+    <Compile Remove="Gelato/**" />
+    <EmbeddedResource Remove="Gelato/**" />
+    <None Remove="Gelato/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Version wildcard used; adjust as needed for compatibility with your Jellyfin server -->
+    <PackageReference Include="Jellyfin.Model" Version="10.*" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.*" />
+    <!-- Reference Newtonsoft.Json for compile but use server's runtime version -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3">
+      <ExcludeAssets>runtime</ExcludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- SQLite for Cavea database -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- After publish, remove server/core assemblies that should not be shipped with a Jellyfin plugin.
+       This avoids type identity and loading issues where the PluginManager refuses to instantiate
+       the plugin because duplicate server assemblies are present in the plugin folder.
+       We intentionally only remove obvious server/runtime assemblies; third-party libs bundled
+       on purpose (e.g. Polly, ICU4N) are left in place.
+  -->
+  <Target Name="RemoveServerAssembliesFromPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <!-- patterns of filenames to remove from publish dir -->
+      <_ToDelete Include="$(PublishDir)MediaBrowser.*.dll" />
+      <_ToDelete Include="$(PublishDir)Jellyfin.*.dll" />
+      <_ToDelete Include="$(PublishDir)Microsoft.Extensions.*.dll" />
+      <_ToDelete Include="$(PublishDir)Microsoft.EntityFrameworkCore*.dll" />
+      <_ToDelete Include="$(PublishDir)MediaBrowser.*.deps.json" />
+      <_ToDelete Include="$(PublishDir)Jellyfin.*.deps.json" />
+      <!-- Also remove any systematic duplicates of server assemblies by file name -->
+      <_ToDelete Include="$(PublishDir)MediaBrowser.*" />
+      <_ToDelete Include="$(PublishDir)Jellyfin.*" />
+    </ItemGroup>
+
+    <!-- Delete the files if they exist; do not fail the build if they are missing -->
+    <Delete Files="@(_ToDelete)" ContinueOnError="true" />
+
+    <!-- Also remove known runtime xml or config files the server will provide -->
+    <Delete Files="$(PublishDir)Cavea.runtimeconfig.json" ContinueOnError="true" />
+  </Target>
+  
+  <!-- Include plugin web assets and embedded config page -->
+  <ItemGroup>
+    <Content Include="Files/wwwroot/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- Embed plugin logo as resource for GetPluginImage() -->
+    <EmbeddedResource Include="Cavea.png">
+      <LogicalName>Cavea.thumb.png</LogicalName>
+    </EmbeddedResource>
+    <!-- Also copy to output as thumb.png for file access -->
+    <Content Include="Cavea.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>thumb.png</TargetPath>
+    </Content>
+    <EmbeddedResource Include="Configuration/configPage.html" />
+    <!-- Embed ALL JavaScript files so they can be inlined into index.html at transform time -->
+    <EmbeddedResource Include="Files/wwwroot/*.js" />
+    <!-- Embed CSS file for injection -->
+    <EmbeddedResource Include="Files/wwwroot/*.css" />
+  </ItemGroup>
+</Project>

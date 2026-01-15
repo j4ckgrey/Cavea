@@ -1,0 +1,59 @@
+# Build output
+bin/
+obj/
+publish/
+
+# Visual Studio / Rider
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Test Results
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+
+# Temporary files
+*.tmp
+*.temp
+*~
+.DS_Store
+Thumbs.db
+
+# Plugin specific
+*.zip
+*.tar.gz
+*.dll.config
+
+# Deployment script (local only)
+deploy.sh
+
+# Local helper scripts (private, not for repo)
+release.sh
+
+# Cloned repositories
+Gelato/
+jellyfin/

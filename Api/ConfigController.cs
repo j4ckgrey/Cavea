@@ -1,0 +1,209 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+
+namespace Cavea.Api
+{
+    [ApiController]
+    // Support both the explicit plugin route and the legacy "myplugin" route
+    // so the Jellyfin admin UI can find the configuration endpoint regardless
+    // of how the client requests it.
+    [Route("api/cavea/config")]
+    [Produces("application/json")]
+    public class ConfigController : ControllerBase
+    {
+        private readonly ILogger<ConfigController> _logger;
+
+        public ConfigController(ILogger<ConfigController> logger)
+        {
+            _logger = logger;
+        }
+
+        [HttpGet]
+        public ActionResult<object> GetConfig()
+        {
+            var cfg = Plugin.Instance?.Configuration;
+            if (cfg == null) return BadRequest("Configuration not available");
+
+            // Only return the TMDB API key to administrators. Non-admin callers will receive
+            // only non-sensitive configuration so we don't leak secrets to user-facing pages.
+            var user = HttpContext.User;
+            var isAdmin = user?.IsInRole("Administrator") ?? false;
+
+            if (isAdmin)
+            {
+                return Ok(new { 
+                    defaultTmdbId = cfg.DefaultTmdbId, 
+                    tmdbApiKey = cfg.TmdbApiKey,
+                    traktClientId = cfg.TraktClientId,
+                    rapidApiKey = cfg.RapidApiKey,
+                    enableSearchFilter = cfg.EnableSearchFilter,
+                    forceTVClientLocalSearch = cfg.ForceTVClientLocalSearch,
+                    disableNonAdminRequests = cfg.DisableNonAdminRequests,
+                    enableAutoImport = cfg.EnableAutoImport,
+                    disableModal = cfg.DisableModal,
+                    showReviewsCarousel = cfg.ShowReviewsCarousel,
+                    reviewSource = cfg.ReviewSource,
+                    versionUi = cfg.VersionUi,
+                    audioUi = cfg.AudioUi,
+                    subtitleUi = cfg.SubtitleUi,
+                    enableExternalSubtitles = cfg.EnableExternalSubtitles,
+                    enableCaveaUI = cfg.EnableCaveaUI,
+                    useCaveaCache = cfg.UseCaveaCache,
+                    useCaveaStaging = cfg.UseCaveaStaging,
+                    catalogMaxItems = cfg.CatalogMaxItems
+                });
+            }
+
+            return Ok(new { 
+                defaultTmdbId = cfg.DefaultTmdbId,
+                disableNonAdminRequests = cfg.DisableNonAdminRequests,
+                enableAutoImport = cfg.EnableAutoImport,
+                disableModal = cfg.DisableModal,
+                showReviewsCarousel = cfg.ShowReviewsCarousel,
+                reviewSource = cfg.ReviewSource,
+                versionUi = cfg.VersionUi,
+                audioUi = cfg.AudioUi,
+                subtitleUi = cfg.SubtitleUi,
+                enableCaveaUI = cfg.EnableCaveaUI,
+                useCaveaCache = cfg.UseCaveaCache,
+                useCaveaStaging = cfg.UseCaveaStaging,
+                catalogMaxItems = cfg.CatalogMaxItems
+            });
+        }
+
+        [HttpPut]
+        [Authorize]
+        public ActionResult SetConfig([FromBody] ConfigDto dto)
+        {
+            _logger.LogInformation("[ConfigController] PUT request received");
+            
+            // Basic admin check
+            var user = HttpContext.User;
+            var isAdmin = user?.IsInRole("Administrator") ?? false;
+            
+            _logger.LogInformation("[ConfigController] User admin check: {IsAdmin}, User: {User}", isAdmin, user?.Identity?.Name ?? "anonymous");
+            
+            if (!isAdmin)
+            {
+                _logger.LogWarning("[ConfigController] PUT rejected - user is not admin");
+                return Forbid();
+            }
+
+            var cfg = Plugin.Instance?.Configuration;
+            if (cfg == null)
+            {
+                _logger.LogError("[ConfigController] Configuration not available");
+                return BadRequest("Configuration not available");
+            }
+
+            _logger.LogInformation("[ConfigController] Updating config");
+
+            cfg.DefaultTmdbId = dto?.defaultTmdbId?.Trim();
+            cfg.TmdbApiKey = dto?.tmdbApiKey?.Trim();
+            cfg.TraktClientId = dto?.traktClientId?.Trim();
+            cfg.RapidApiKey = dto?.rapidApiKey?.Trim();
+            
+            // Update review source
+            if (!string.IsNullOrWhiteSpace(dto.reviewSource))
+            {
+                cfg.ReviewSource = dto.reviewSource.Trim();
+            }
+            
+            // Update search filter settings
+            if (dto.enableSearchFilter.HasValue)
+            {
+                cfg.EnableSearchFilter = dto.enableSearchFilter.Value;
+            }
+            if (dto.forceTVClientLocalSearch.HasValue)
+            {
+                cfg.ForceTVClientLocalSearch = dto.forceTVClientLocalSearch.Value;
+            }
+            if (dto.disableNonAdminRequests.HasValue)
+            {
+                cfg.DisableNonAdminRequests = dto.disableNonAdminRequests.Value;
+            }
+            if (dto.enableAutoImport.HasValue)
+            {
+                cfg.EnableAutoImport = dto.enableAutoImport.Value;
+            }
+            if (dto.disableModal.HasValue)
+            {
+                cfg.DisableModal = dto.disableModal.Value;
+            }
+            if (!string.IsNullOrWhiteSpace(dto.versionUi))
+            {
+                cfg.VersionUi = dto.versionUi.Trim();
+            }
+            if (!string.IsNullOrWhiteSpace(dto.audioUi))
+            {
+                cfg.AudioUi = dto.audioUi.Trim();
+            }
+            if (!string.IsNullOrWhiteSpace(dto.subtitleUi))
+            {
+                cfg.SubtitleUi = dto.subtitleUi.Trim();
+            }
+            
+            // Show/hide reviews carousel
+            if (dto.showReviewsCarousel.HasValue)
+            {
+                cfg.ShowReviewsCarousel = dto.showReviewsCarousel.Value;
+            }
+            if (dto.enableCaveaUI.HasValue)
+            {
+                cfg.EnableCaveaUI = dto.enableCaveaUI.Value;
+                _logger.LogInformation("[ConfigController] EnableCaveaUI updated to: {Value}", cfg.EnableCaveaUI);
+            }
+
+            if (dto.enableExternalSubtitles.HasValue)
+            {
+                cfg.EnableExternalSubtitles = dto.enableExternalSubtitles.Value;
+            }
+            
+            if (dto.useCaveaCache.HasValue)
+            {
+                cfg.UseCaveaCache = dto.useCaveaCache.Value;
+                _logger.LogInformation("[ConfigController] UseCaveaCache updated to: {Value}", cfg.UseCaveaCache);
+            }
+            
+            if (dto.useCaveaStaging.HasValue)
+            {
+                cfg.UseCaveaStaging = dto.useCaveaStaging.Value;
+                _logger.LogInformation("[ConfigController] UseCaveaStaging updated to: {Value}", cfg.UseCaveaStaging);
+            }
+            
+            if (dto.catalogMaxItems.HasValue)
+            {
+                cfg.CatalogMaxItems = dto.catalogMaxItems.Value;
+                _logger.LogInformation("[ConfigController] CatalogMaxItems updated to: {Value}", cfg.CatalogMaxItems);
+            }
+            
+            Plugin.Instance.SaveConfiguration();
+            _logger.LogInformation("[ConfigController] Configuration saved.");
+            return Ok();
+        }
+    }
+
+    public class ConfigDto
+    {
+        public string defaultTmdbId { get; set; }
+        public string tmdbApiKey { get; set; }
+        public string traktClientId { get; set; }
+        public string rapidApiKey { get; set; }
+        public string reviewSource { get; set; }
+        public bool? enableSearchFilter { get; set; }
+        public bool? forceTVClientLocalSearch { get; set; }
+        public bool? disableNonAdminRequests { get; set; }
+        public bool? enableAutoImport { get; set; }
+        public bool? disableModal { get; set; }
+        public bool? showReviewsCarousel { get; set; }
+        public string versionUi { get; set; }
+        public string audioUi { get; set; }
+        public string subtitleUi { get; set; }
+        public bool? enableExternalSubtitles { get; set; }
+        public bool? enableCaveaUI { get; set; }
+        public bool? useCaveaCache { get; set; }
+        public bool? useCaveaStaging { get; set; }
+        public int? catalogMaxItems { get; set; }
+    }
+}
