@@ -27,9 +27,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <!-- SQLite for Cavea database -->
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0">
-      <ExcludeAssets>runtime</ExcludeAssets>
-    </PackageReference>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
   </ItemGroup>
 
   <!-- After publish, remove server/core assemblies that should not be shipped with a Jellyfin plugin.
