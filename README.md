@@ -23,16 +23,9 @@ Cavea ensures your Media Streaming experience stays fast, reliable, and visually
 
 ## ⚙️ Key Features
 
-### 🧠 Server-Side Intelligence
-
-See [STREAM_CACHING.md](./STREAM_CACHING.md) for detailed documentation.
 #### 🧩 Smart Probing for Tracks
 Automatically fetches **audio and subtitle tracks** from remote streams for every platform, including Android TV and Fire TV.  
 Cavea ensures your playback options are complete before the media even starts loading.
-
-> This makes it a perfect companion for the **Gelato** plugin — unlocking full hybrid-source playback.
-
----
 
 ### 📬 Complete Requests System
 
@@ -66,11 +59,6 @@ Instead of automatically importing everything Gelato finds, Cavea opens a detail
 ### 🎨 Interface Enhancements
 
 Cavea provides a bunch of UI enhancements to make your experience better.
-
-#### 🧱 Smart Selectors
-Each version, audio, and subtitle field now uses a **responsive carousel or dropdown**, designed for clarity and speed.  
-Long filenames are truncated elegantly, with hover or click revealing full details.
----
 
 ## 🧩 Installation (Currently works with Jellyfin until the first release of Remux Server)
 
