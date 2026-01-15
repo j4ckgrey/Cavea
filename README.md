@@ -1,5 +1,3 @@
-<h1 align="center">Cavea</h1>
-
 <p align="center">
   <img src="cavea_name.png" alt="Cavea Logo" width="200" />
 </p>
