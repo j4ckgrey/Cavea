@@ -92,7 +92,7 @@ namespace Cavea.Api
                 
                 if (cachedStreams == null || cachedStreams.Count == 0)
                 {
-                    _logger.LogWarning("⚪ [Cavea] No cached streams found in DB, cannot filter by web compatibility. Returning all sources.");
+                    _logger.LogInformation("⚪ [Cavea] No cached streams found in DB, cannot filter by web compatibility. Returning all sources.");
                     return Ok(new { MediaSources = allSources });
                 }
 
@@ -379,7 +379,7 @@ namespace Cavea.Api
                     if (webCompat == 1)
                     {
                         var probedStreams = await _dbService.GetProbedStreamsAsync(itemId, stream.StremioId);
-                        var externalSubs = await _dbService.GetExternalSubtitlesAsync(itemId);
+                        var externalSubs = new List<object>(); // No longer cached
 
                         compatibleStreams.Add(new
                         {
@@ -401,12 +401,7 @@ namespace Cavea.Api
                                 ps.SampleRate,
                                 ps.BitRate
                             }),
-                            ExternalSubtitles = externalSubs?.Select(es => new
-                            {
-                                DisplayName = es.Title,
-                                es.Language,
-                                es.Url
-                            })
+                            ExternalSubtitles = externalSubs
                         });
                     }
                 }

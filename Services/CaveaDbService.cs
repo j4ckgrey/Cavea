@@ -293,21 +293,8 @@ namespace Cavea.Services
                     CREATE INDEX IF NOT EXISTS idx_catalogitems_imdbid ON CatalogItems(ImdbId);
                     CREATE INDEX IF NOT EXISTS idx_catalogitems_status ON CatalogItems(Status);
                     CREATE INDEX IF NOT EXISTS idx_catalogitems_type ON CatalogItems(ItemType);
-
-                    CREATE TABLE IF NOT EXISTS ExternalSubtitles (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        ItemId TEXT NOT NULL,
-                        SubtitleId TEXT,
-                        Url TEXT NOT NULL,
-                        Language TEXT,
-                        Title TEXT,
-                        CachedAt TEXT NOT NULL,
-                        UNIQUE(ItemId, SubtitleId, Language)
-                    );
-
-                    CREATE INDEX IF NOT EXISTS idx_externalsubtitles_itemid ON ExternalSubtitles(ItemId);
-                    CREATE INDEX IF NOT EXISTS idx_externalsubtitles_language ON ExternalSubtitles(Language);
                 ";
+
 
                 createTableCmd.ExecuteNonQuery();
                 _logger.LogInformation("[CaveaDb] Database initialized at {Path}", _dbPath);
@@ -956,27 +943,16 @@ namespace Cavea.Services
                     }
                     
                     // Fetch external subtitles for the item
-                    var externalSubtitles = await GetExternalSubtitlesAsync(itemId);
-                    if (externalSubtitles != null && externalSubtitles.Count > 0)
-                    {
-                        // Convert Api.ExternalSubtitleInfo to Services.ExternalSubtitleInfo
-                        var convertedSubs = externalSubtitles.Select(s => new Cavea.Services.ExternalSubtitleInfo
-                        {
-                            Id = 0, // Will be assigned from DB if needed
-                            ItemId = itemId,
-                            SubtitleId = s.Id,
-                            Url = s.Url,
-                            Language = s.Language,
-                            Title = s.Title,
-                            CachedAt = s.CachedAt
-                        }).ToList();
+                    // Fetch external subtitles for the item
+                    // External subtitles are no longer cached in DB
+                    List<Cavea.Services.ExternalSubtitleInfo>? convertedSubs = null;
                         
                         // Add external subtitles to all streams (they're item-level, not stream-specific)
                         foreach (var stream in streams)
                         {
                             stream.ExternalSubtitles = convertedSubs;
                         }
-                    }
+
 
                     _logger.LogInformation("[CaveaDb] Found {Count} cached streams for {ItemId} with probed data and subtitles", streams.Count, itemId);
                     return streams;
@@ -1531,98 +1507,7 @@ namespace Cavea.Services
 
         #endregion
 
-        #region External Subtitles
 
-        /// <summary>
-        /// Save external subtitles for an item to the database
-        /// </summary>
-        public async Task<bool> SaveExternalSubtitlesAsync(string itemId, List<Api.ExternalSubtitleInfo> subtitles)
-        {
-            try
-            {
-                EnsureConnection();
-
-                // Delete old subtitles for this item
-                using (var deleteCmd = _connection!.CreateCommand())
-                {
-                    deleteCmd.CommandText = "DELETE FROM ExternalSubtitles WHERE ItemId = @itemId";
-                    deleteCmd.Parameters.AddWithValue("@itemId", itemId);
-                    await deleteCmd.ExecuteNonQueryAsync();
-                }
-
-                // Insert new subtitles
-                foreach (var sub in subtitles)
-                {
-                    using var cmd = _connection!.CreateCommand();
-                    cmd.CommandText = @"
-                        INSERT INTO ExternalSubtitles (ItemId, SubtitleId, Url, Language, Title, CachedAt)
-                        VALUES (@itemId, @subId, @url, @lang, @title, @cachedAt)
-                    ";
-
-                    cmd.Parameters.AddWithValue("@itemId", itemId);
-                    cmd.Parameters.AddWithValue("@subId", sub.Id ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@url", sub.Url);
-                    cmd.Parameters.AddWithValue("@lang", sub.Language ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@title", sub.Title ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@cachedAt", DateTime.UtcNow.ToString("o"));
-
-                    await cmd.ExecuteNonQueryAsync();
-                }
-
-                _logger.LogInformation("[CaveaDb] Saved {Count} external subtitles for {ItemId}", subtitles.Count, itemId);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[CaveaDb] Failed to save external subtitles for {ItemId}", itemId);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Get cached external subtitles for an item
-        /// </summary>
-        public async Task<List<Api.ExternalSubtitleInfo>?> GetExternalSubtitlesAsync(string itemId)
-        {
-            try
-            {
-                EnsureConnection();
-
-                using var cmd = _connection!.CreateCommand();
-                cmd.CommandText = @"
-                    SELECT SubtitleId, Url, Language, Title, CachedAt
-                    FROM ExternalSubtitles
-                    WHERE ItemId = @itemId
-                    ORDER BY Language
-                ";
-
-                cmd.Parameters.AddWithValue("@itemId", itemId);
-
-                var subtitles = new List<Api.ExternalSubtitleInfo>();
-                using var reader = await cmd.ExecuteReaderAsync();
-
-                while (await reader.ReadAsync())
-                {
-                    subtitles.Add(new Api.ExternalSubtitleInfo
-                    {
-                        Id = reader.IsDBNull(0) ? null : reader.GetString(0),
-                        Url = reader.GetString(1),
-                        Language = reader.IsDBNull(2) ? null : reader.GetString(2),
-                        Title = reader.IsDBNull(3) ? null : reader.GetString(3),
-                        CachedAt = DateTime.Parse(reader.GetString(4))
-                    });
-                }
-
-                return subtitles;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[CaveaDb] Failed to get external subtitles for {ItemId}", itemId);
-                return null;
-            }
-        }
-
-        #endregion
 
         public void Dispose()
         {

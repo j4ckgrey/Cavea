@@ -40,8 +40,10 @@ namespace Cavea.Services
                     return null;
                 }
 
-                // Fetch directly from Gelato (no caching)
-                _logger.LogInformation("⚪ [Cavea.Subtitle] Fetching from Gelato...");
+                // DIRECT FETCH - NO CACHING
+                // User requested to remove caching and fetch directly from Gelato/Stremio on demand.
+
+                _logger.LogInformation("⚪ [Cavea.Subtitle] No cache, fetching from Gelato...");
 
                 if (!Guid.TryParse(itemId, out var itemGuid))
                 {

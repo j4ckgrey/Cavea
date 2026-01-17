@@ -75,7 +75,7 @@ namespace Cavea.Api
                     });
                 }
 
-                return NotFound(new { error = "No subtitles found in Gelato cache" });
+                return NotFound(new { error = "No subtitles found" });
             }
             catch (Exception ex)
             {
@@ -105,17 +105,15 @@ namespace Cavea.Api
 
             try
             {
-                // Get from cache via DB service directly as it's just retrieval
-                _logger.LogInformation("[Cavea.Subtitle]  [SUBTITLE PROXY] Fetching cached subtitles for item {ItemId}...", itemId);
-                var subtitles = await _dbService.GetExternalSubtitlesAsync(itemId);
+                // NO CACHE - Re-fetch fresh list to find the URL
+                // This is less efficient but requested by user to avoid caching issues
+                var subtitles = await _subtitleService.FetchExternalSubtitlesAsync(itemId);
+
                 if (subtitles == null || subtitles.Count == 0)
                 {
-                    _logger.LogWarning("[Cavea.Subtitle]  [SUBTITLE PROXY] No cached subtitles found for item {ItemId}", itemId);
-                    return NotFound("No cached subtitles");
+                    return NotFound("⚪ [Cavea.Subtitle] No subtitles found");
                 }
                 
-                _logger.LogInformation("[Cavea.Subtitle]  [SUBTITLE PROXY] Found {Count} cached subtitles for item {ItemId}", subtitles.Count, itemId);
-
                 // Find matching subtitle
                 ExternalSubtitleInfo? targetSub = null;
                 if (!string.IsNullOrEmpty(subId))
@@ -133,17 +131,14 @@ namespace Cavea.Api
 
                 if (targetSub == null || string.IsNullOrEmpty(targetSub.Url))
                 {
-                    _logger.LogWarning("[Cavea.Subtitle]  [SUBTITLE PROXY] No matching subtitle found. Looking for: subId={SubId}, lang={Lang}", subId, lang);
-                    return NotFound("Subtitle not found");
+                    return NotFound("⚪ [Cavea.Subtitle] Subtitle not found");
                 }
-
-                _logger.LogInformation("[Cavea.Subtitle]  [SUBTITLE PROXY] Found match: id={Id}, title={Title}, url={Url}", targetSub.Id, targetSub.Title, targetSub.Url);
 
                 // Fetch subtitle content from original URL
                 var response = await _httpClient.GetAsync(targetSub.Url);
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("[Cavea.Subtitle] Failed to fetch subtitle from {Url}: {Status}", targetSub.Url, response.StatusCode);
+                    _logger.LogWarning("⚪ [Cavea.Subtitle] Failed to fetch subtitle from {Url}: {Status}", targetSub.Url, response.StatusCode);
                     return StatusCode((int)response.StatusCode, "Failed to fetch subtitle from origin");
                 }
 
@@ -173,7 +168,7 @@ namespace Cavea.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[Cavea.Subtitle] Failed to proxy subtitle for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪ [Cavea.Subtitle] Failed to proxy subtitle for {ItemId}", itemId);
                 return StatusCode(500, "Failed to proxy subtitle");
             }
         }
@@ -189,7 +184,8 @@ namespace Cavea.Api
                 return BadRequest(new { error = "Invalid itemId" });
             }
 
-            var subtitles = await _dbService.GetExternalSubtitlesAsync(itemId);
+            // Direct fetch, no DB
+            var subtitles = await _subtitleService.FetchExternalSubtitlesAsync(itemId);
             if (subtitles == null || subtitles.Count == 0)
             {
                 return Ok(new { itemId, subtitles = Array.Empty<object>() });
@@ -203,7 +199,7 @@ namespace Cavea.Api
                     title = s.Title,
                     url = s.Url,
                     caveaUrl = $"/api/cavea/subtitles/proxy?itemId={itemId}&subId={s.Id}",
-                    cachedAt = s.CachedAt
+                    cachedAt = DateTime.UtcNow
                 })
             });
         }
@@ -224,19 +220,19 @@ namespace Cavea.Api
 
             try
             {
-                _logger.LogInformation("[Cavea.Subtitle] Downloading subtitle from {Url}", url);
+                _logger.LogInformation("⚪ [Cavea.Subtitle] Downloading subtitle from {Url}", url);
 
                 var response = await _httpClient.GetAsync(url);
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("[Cavea.Subtitle] Failed to download subtitle. Status: {Status}", response.StatusCode);
+                    _logger.LogWarning("⚪ [Cavea.Subtitle] Failed to download subtitle. Status: {Status}", response.StatusCode);
                     return StatusCode((int)response.StatusCode, "Failed to download subtitle");
                 }
 
                 var content = await response.Content.ReadAsStringAsync();
                 var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
 
-                _logger.LogInformation("[Cavea.Subtitle] Downloaded subtitle, size: {Size} bytes, type: {Type}", content.Length, contentType);
+                _logger.LogInformation("⚪ [Cavea.Subtitle] Downloaded subtitle, size: {Size} bytes, type: {Type}", content.Length, contentType);
 
                 // Detect format and convert to VTT
                 string vttContent;
@@ -265,7 +261,7 @@ namespace Cavea.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[Cavea.Subtitle] Error converting subtitle from {Url}", url);
+                _logger.LogError(ex, "⚪ [Cavea.Subtitle] Error converting subtitle from {Url}", url);
                 return StatusCode(500, $"Error converting subtitle: {ex.Message}");
             }
         }
