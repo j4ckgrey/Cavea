@@ -348,74 +348,87 @@ namespace Cavea.Api
             
             try
             {
-                // IMDb Scraper API endpoint
-                var url = $"https://imdb-scraper4.p.rapidapi.com/?work_type=reviews_imdb&keyword_1={imdbId}&keyword_2={REVIEWS_LIMIT}";
+                // IMDb8 API endpoint (ApiDojo)
+                var url = $"https://imdb8.p.rapidapi.com/title/get-user-reviews?tconst={imdbId}";
                 
                 using var client = new HttpClient();
-                client.DefaultRequestHeaders.Add("X-RapidAPI-Key", rapidApiKey);
-                client.DefaultRequestHeaders.Add("X-RapidAPI-Host", "imdb-scraper4.p.rapidapi.com");
+                client.DefaultRequestHeaders.Add("x-rapidapi-key", rapidApiKey);
+                client.DefaultRequestHeaders.Add("x-rapidapi-host", "imdb8.p.rapidapi.com");
                 
                 var response = await client.GetStringAsync(url);
                 using var reviewsDoc = JsonDocument.Parse(response);
                 var root = reviewsDoc.RootElement;
                 
-                // Transform IMDb Scraper response to TMDB-like format
+                // Transform IMDb8 response to TMDB-like format
                 var reviews = new List<object>();
                 
-                // IMDb Scraper returns an array directly
-                if (root.ValueKind == JsonValueKind.Array)
+                // IMDb8 returns an object with a "reviews" array
+                if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("reviews", out var reviewsArray) && reviewsArray.ValueKind == JsonValueKind.Array)
                 {
                     var count = 0;
-                    foreach (var review in root.EnumerateArray())
+                    foreach (var review in reviewsArray.EnumerateArray())
                     {
                         if (count >= REVIEWS_LIMIT) break;
                         
                         // Extract author
                         var author = "Anonymous";
-                        if (review.TryGetProperty("author", out var authorProp) && authorProp.ValueKind != JsonValueKind.Null)
+                        double? authorRating = null;
+
+                        if (review.TryGetProperty("author", out var authorObj) && authorObj.ValueKind == JsonValueKind.Object)
                         {
-                            author = authorProp.GetString() ?? "Anonymous";
-                        }
-                        else if (review.TryGetProperty("username", out var usernameProp) && usernameProp.ValueKind != JsonValueKind.Null)
-                        {
-                            author = usernameProp.GetString() ?? "Anonymous";
-                        }
-                        else if (review.TryGetProperty("name", out var nameProp) && nameProp.ValueKind != JsonValueKind.Null)
-                        {
-                            author = nameProp.GetString() ?? "Anonymous";
+                            if (authorObj.TryGetProperty("displayName", out var nameProp))
+                            {
+                                author = nameProp.GetString() ?? "Anonymous";
+                            }
+                            
+                            if (authorObj.TryGetProperty("authorRating", out var ratingProp) && ratingProp.ValueKind == JsonValueKind.Number)
+                            {
+                                authorRating = ratingProp.GetDouble();
+                            }
                         }
                         
                         // Extract content
                         var content = "";
-                        if (review.TryGetProperty("comment", out var commentProp) && commentProp.ValueKind != JsonValueKind.Null)
-                        {
-                            content = commentProp.GetString() ?? "";
-                        }
-                        else if (review.TryGetProperty("text", out var textProp) && textProp.ValueKind != JsonValueKind.Null)
+                        if (review.TryGetProperty("reviewText", out var textProp))
                         {
                             content = textProp.GetString() ?? "";
                         }
                         
-                        // Clean HTML content
-                        content = CleanHTMLContent(content);
-                        
-                        // Extract rating
-                        string? rating = null;
-                        if (review.TryGetProperty("rating", out var ratingProp) && ratingProp.ValueKind != JsonValueKind.Null)
+                        // Extract title (optional)
+                        var title = "";
+                        if (review.TryGetProperty("reviewTitle", out var titleProp))
                         {
-                            rating = ratingProp.ValueKind == JsonValueKind.Number 
-                                ? ratingProp.GetDouble().ToString("F1") 
-                                : ratingProp.GetString();
+                            title = titleProp.GetString() ?? "";
+                        }
+
+                        // Prepend title to content if it exists
+                        if (!string.IsNullOrEmpty(title))
+                        {
+                            content = $"**{title}**\n\n{content}";
+                        }
+                        
+                        // Extract date
+                        var createdAt = DateTime.UtcNow.ToString("O");
+                        if (review.TryGetProperty("submissionDate", out var dateProp)) 
+                        {
+                            createdAt = dateProp.GetString() ?? DateTime.UtcNow.ToString("O");
+                        }
+
+                        // Extract ID
+                        var id = Guid.NewGuid().ToString();
+                        if (review.TryGetProperty("id", out var idProp))
+                        {
+                            id = idProp.GetString() ?? Guid.NewGuid().ToString();
                         }
                         
                         reviews.Add(new
                         {
                             author = author,
-                            author_details = new { username = author, rating = rating },
+                            author_details = new { username = author, rating = authorRating },
                             content = content,
-                            created_at = DateTime.UtcNow.ToString("O"),
-                            id = Guid.NewGuid().ToString(),
-                            rating = rating,
+                            created_at = createdAt,
+                            id = id,
+                            rating = authorRating,
                             url = $"https://www.imdb.com/title/{imdbId}/reviews"
                         });
                         count++;

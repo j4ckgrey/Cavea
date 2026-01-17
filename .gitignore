@@ -57,3 +57,5 @@ release.sh
 # Cloned repositories
 Gelato/
 jellyfin/
+
+api_endpoints.md
