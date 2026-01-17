@@ -12,7 +12,7 @@ namespace Cavea
             try
             {
                 // Keep the Console.WriteLine for containers that capture stdout
-                Console.WriteLine($"[Cavea] ⚪ {message}");
+                Console.WriteLine($"⚪ [Cavea] {message}");
 
                 // Also append to a dedicated log file in Jellyfin's config/log so we can
                 // reliably see plugin activity even if Console output isn't routed the
@@ -20,7 +20,7 @@ namespace Cavea
                 try
                 {
                     var logPath = "/config/log/cavea-plugin.log";
-                    var line = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ssZ}] [Cavea] ⚪ {message}\n";
+                    var line = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ssZ}] ⚪ [Cavea] {message}\n";
                     System.IO.File.AppendAllText(logPath, line);
                 }
                 catch

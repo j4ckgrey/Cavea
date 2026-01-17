@@ -297,11 +297,11 @@ namespace Cavea.Services
 
 
                 createTableCmd.ExecuteNonQuery();
-                _logger.LogInformation("[CaveaDb] Database initialized at {Path}", _dbPath);
+                _logger.LogInformation("⚪  [CaveaDb] Database initialized at {Path}", _dbPath);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to initialize database, will retry on first use");
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to initialize database, will retry on first use");
                 // Don't throw - let the plugin load and retry on first database operation
                 try { _connection?.Close(); } catch { }
                 _connection = null;
@@ -321,7 +321,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to open database connection");
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to open database connection");
                 throw;
             }
         }
@@ -356,12 +356,12 @@ namespace Cavea.Services
                 cmd.Parameters.AddWithValue("@cachedAt", DateTime.UtcNow.ToString("o"));
 
                 await cmd.ExecuteNonQueryAsync();
-                _logger.LogInformation("[CaveaDb] Saved reviews for {ItemId} from {Source}", itemId, source);
+                _logger.LogInformation("⚪  [CaveaDb] Saved reviews for {ItemId} from {Source}", itemId, source);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to save reviews for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save reviews for {ItemId}", itemId);
                 return false;
             }
         }
@@ -392,12 +392,12 @@ namespace Cavea.Services
                     // Cache valid for 24 hours
                     if (DateTime.UtcNow - cachedAt < TimeSpan.FromHours(24))
                     {
-                        _logger.LogInformation("[CaveaDb] Found cached reviews for {ItemId} from {Source}", itemId, source);
+                        _logger.LogInformation("⚪  [CaveaDb] Found cached reviews for {ItemId} from {Source}", itemId, source);
                         return reader.GetString(0);
                     }
                     else
                     {
-                        _logger.LogInformation("[CaveaDb] Cached reviews expired for {ItemId}", itemId);
+                        _logger.LogInformation("⚪  [CaveaDb] Cached reviews expired for {ItemId}", itemId);
                     }
                 }
 
@@ -405,7 +405,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to get reviews for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get reviews for {ItemId}", itemId);
                 return null;
             }
         }
@@ -443,7 +443,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to save metadata for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save metadata for {ItemId}", itemId);
                 return false;
             }
         }
@@ -480,7 +480,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to get items needing updates");
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get items needing updates");
             }
             return items;
         }
@@ -528,7 +528,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to save catalog {CatalogId}", catalogId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save catalog {CatalogId}", catalogId);
                 return false;
             }
         }
@@ -564,7 +564,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to get catalogs");
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get catalogs");
             }
             return catalogs;
         }
@@ -730,7 +730,7 @@ namespace Cavea.Services
                     }
 
                     transaction.Commit();
-                    _logger.LogDebug("[CaveaDb] Saved complete metadata for {ItemId} ({Name})", metadata.ItemId, metadata.Name);
+                    _logger.LogDebug("⚪  [CaveaDb] Saved complete metadata for {ItemId} ({Name})", metadata.ItemId, metadata.Name);
                     return true;
                 }
                 catch
@@ -741,7 +741,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to save complete metadata for {ItemId}", metadata.ItemId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save complete metadata for {ItemId}", metadata.ItemId);
                 return false;
             }
         }
@@ -787,7 +787,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to save collection {CollectionId}", collection.CollectionId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save collection {CollectionId}", collection.CollectionId);
                 return false;
             }
         }
@@ -870,12 +870,12 @@ namespace Cavea.Services
                     await cmd.ExecuteNonQueryAsync();
                 }
 
-                _logger.LogInformation("[CaveaDb] Saved {Count} streams for {ItemId}", streams.Count, itemId);
+                _logger.LogInformation("⚪  [CaveaDb] Saved {Count} streams for {ItemId}", streams.Count, itemId);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to save streams for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save streams for {ItemId}", itemId);
                 return false;
             }
         }
@@ -954,7 +954,7 @@ namespace Cavea.Services
                         }
 
 
-                    _logger.LogInformation("[CaveaDb] Found {Count} cached streams for {ItemId} with probed data and subtitles", streams.Count, itemId);
+                    _logger.LogInformation("⚪  [CaveaDb] Found {Count} cached streams for {ItemId} with probed data and subtitles", streams.Count, itemId);
                     return streams;
                 }
 
@@ -962,7 +962,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to get streams for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get streams for {ItemId}", itemId);
                 return null;
             }
         }
@@ -979,7 +979,7 @@ namespace Cavea.Services
                 // No cache, all fresh streams are new
                 result.NewStreams = freshStreams;
                 result.HasNewStreams = freshStreams.Count > 0;
-                _logger.LogDebug("[CaveaDb] No cached streams, all {Count} are new", freshStreams.Count);
+                _logger.LogDebug("⚪  [CaveaDb] No cached streams, all {Count} are new", freshStreams.Count);
                 return result;
             }
 
@@ -1010,7 +1010,7 @@ namespace Cavea.Services
             result.TotalNew = newStreams.Count;
 
             _logger.LogDebug(
-                "[CaveaDb] Stream comparison: {Cached} cached, {Fresh} fresh, {New} new", 
+                "⚪  [CaveaDb] Stream comparison: {Cached} cached, {Fresh} fresh, {New} new", 
                 cachedStreams.Count, 
                 freshStreams.Count, 
                 newStreams.Count
@@ -1037,7 +1037,7 @@ namespace Cavea.Services
 
                 if (newStreams.Count == 0)
                 {
-                    _logger.LogDebug("[CaveaDb] No new streams to merge for {ItemId}", itemId);
+                    _logger.LogDebug("⚪  [CaveaDb] No new streams to merge for {ItemId}", itemId);
                     return true;
                 }
 
@@ -1106,12 +1106,12 @@ namespace Cavea.Services
                     await cmd.ExecuteNonQueryAsync();
                 }
 
-                _logger.LogInformation("[CaveaDb] Merged {Count} new streams for {ItemId}", newStreams.Count, itemId);
+                _logger.LogInformation("⚪  [CaveaDb] Merged {Count} new streams for {ItemId}", newStreams.Count, itemId);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to merge streams for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to merge streams for {ItemId}", itemId);
                 return false;
             }
         }
@@ -1221,12 +1221,12 @@ namespace Cavea.Services
                     await cmd.ExecuteNonQueryAsync();
                 }
 
-                _logger.LogInformation("[CaveaDb] Saved {Count} probed streams for {ItemId}", streams.Count, itemId);
+                _logger.LogInformation("⚪  [CaveaDb] Saved {Count} probed streams for {ItemId}", streams.Count, itemId);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to save probed streams for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save probed streams for {ItemId}", itemId);
                 return false;
             }
         }
@@ -1284,7 +1284,7 @@ namespace Cavea.Services
 
                 if (streams.Count > 0)
                 {
-                    _logger.LogInformation("[CaveaDb] Found {Count} cached probed streams for {ItemId}", streams.Count, itemId);
+                    _logger.LogInformation("⚪  [CaveaDb] Found {Count} cached probed streams for {ItemId}", streams.Count, itemId);
                     return streams;
                 }
 
@@ -1292,7 +1292,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to get probed streams for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get probed streams for {ItemId}", itemId);
                 return null;
             }
         }
@@ -1346,7 +1346,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to save catalog item {ImdbId}", item.ImdbId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save catalog item {ImdbId}", item.ImdbId);
                 return false;
             }
         }
@@ -1406,7 +1406,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to get catalog items by status {Status}", status);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get catalog items by status {Status}", status);
                 return new List<CatalogItemInfo>();
             }
         }
@@ -1442,7 +1442,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to update catalog item {Id}", id);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to update catalog item {Id}", id);
                 return false;
             }
         }
@@ -1500,7 +1500,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[CaveaDb] Failed to get catalog items for {CatalogId}", catalogId);
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get catalog items for {CatalogId}", catalogId);
                 return new List<CatalogItemInfo>();
             }
         }

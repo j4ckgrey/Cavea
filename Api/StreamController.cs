@@ -66,7 +66,7 @@ namespace Cavea.Api
                     ms.Path.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) &&
                    ms.Protocol != MediaBrowser.Model.MediaInfo.MediaProtocol.Http)
                {
-                   _logger.LogWarning("[Cavea.Stream] Fixing Protocol for {Id}. Was {Proto}, setting to Http. Path: {Path}", ms.Id, ms.Protocol, ms.Path);
+                   _logger.LogWarning("⚪  [Cavea.Stream] Fixing Protocol for {Id}. Was {Proto}, setting to Http. Path: {Path}", ms.Id, ms.Protocol, ms.Path);
                    ms.Protocol = MediaBrowser.Model.MediaInfo.MediaProtocol.Http;
                }
             }
@@ -91,7 +91,7 @@ namespace Cavea.Api
                 })
                 .ToList();
 
-            _logger.LogInformation("[Cavea.Stream] Found {Count} audio streams in MediaSource from manager.", audioStreams.Count);
+            _logger.LogInformation("⚪  [Cavea.Stream] Found {Count} audio streams in MediaSource from manager.", audioStreams.Count);
 
             // 3. Get embedded subtitles from Jellyfin
             // For web clients: skip embedded subs - they can only use external Gelato subs or burn-in
@@ -116,11 +116,11 @@ namespace Cavea.Api
                         url = !string.IsNullOrEmpty(s.DeliveryUrl) ? s.DeliveryUrl : (string?)null
                     })
                     .ToList();
-                _logger.LogInformation("[Cavea.Stream] Found {Count} embedded subtitle streams.", embeddedSubs.Count);
+                _logger.LogInformation("⚪  [Cavea.Stream] Found {Count} embedded subtitle streams.", embeddedSubs.Count);
             }
 
-            // 4. Also fetch external subtitles from Gelato
-            var externalSubs = await _subtitleService.FetchExternalSubtitlesAsync(itemId);
+            // 4. NO AUTO-FETCH of external subtitles. 
+            // Clients must fetch them manually via /api/cavea/subtitles/fetch if needed.
             
             var allSubs = new List<object>();
             allSubs.Add(new { index = -1, title = (string?)"None", language = (string?)null, codec = (string?)null, isForced = (bool?)false, isDefault = (bool?)false, isExternal = false, url = (string?)null });
@@ -128,27 +128,10 @@ namespace Cavea.Api
             // Add embedded subs first (only for native clients)
             allSubs.AddRange(embeddedSubs);
             
-            // Add external subs if available
-            if (externalSubs != null && externalSubs.Count > 0)
-            {
-                var externalSubsFormatted = externalSubs.Select((sub, idx) => new {
-                    index = 1000 + idx, // High index to not conflict with embedded
-                    title = (string?)sub.Title,
-                    language = (string?)sub.Language,
-                    codec = (string?)"srt",
-                    isForced = (bool?)false,
-                    isDefault = (bool?)false,
-                    isExternal = true,
-                    url = $"/api/cavea/subtitles/proxy?itemId={itemId}&subId={sub.Id}"
-                }).ToList();
-
-                allSubs.AddRange(externalSubsFormatted.Cast<object>());
-            }
-            
             // If no embedded streams found, try probing if applicable (fallback logic)
             if (audioStreams.Count == 0 && embeddedSubs.Count == 0 && targetSource.SupportsProbing && targetSource.Protocol == MediaBrowser.Model.MediaInfo.MediaProtocol.Http)
             {
-               _logger.LogWarning("[Cavea.Stream] No streams found in MediaSource. Attempting Backup Probing for {Url}", targetSource.Path);
+               _logger.LogWarning("⚪  [Cavea.Stream] No streams found in MediaSource. Attempting Backup Probing for {Url}", targetSource.Path);
                var url = targetSource.Path;
                if (url.StartsWith("stremio://", StringComparison.OrdinalIgnoreCase))
                {

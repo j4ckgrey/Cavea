@@ -7,7 +7,7 @@ using Cavea.Api;
 using Cavea.Services;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace Cavea.Services
 {
@@ -31,7 +31,7 @@ namespace Cavea.Services
         {
             try
             {
-                _logger.LogInformation("[Cavea.Subtitle] FetchExternalSubtitles START for {ItemId}", itemId);
+                _logger.LogInformation("⚪  [Cavea.Subtitle] FetchExternalSubtitles START for {ItemId}", itemId);
 
                 var cfg = Plugin.Instance?.Configuration;
                 if (cfg == null || !cfg.EnableExternalSubtitles)
@@ -40,14 +40,12 @@ namespace Cavea.Services
                     return null;
                 }
 
-                // DIRECT FETCH - NO CACHING
-                // User requested to remove caching and fetch directly from Gelato/Stremio on demand.
-
+                // DIRECT FETCH - NO PERSISTENT CACHING
                 _logger.LogInformation("⚪ [Cavea.Subtitle] No cache, fetching from Gelato...");
 
                 if (!Guid.TryParse(itemId, out var itemGuid))
                 {
-                    _logger.LogWarning("[Cavea.Subtitle] Invalid GUID format: {ItemId}", itemId);
+                    _logger.LogWarning("⚪  [Cavea.Subtitle] Invalid GUID format: {ItemId}", itemId);
                     return null;
                 }
 
@@ -74,7 +72,7 @@ namespace Cavea.Services
                 var item = _libraryManager.GetItemById(itemGuid);
                 if (item == null)
                 {
-                    _logger.LogWarning("[Cavea.Subtitle] Item not found in library: {ItemId}", itemId);
+                    _logger.LogWarning("⚪  [Cavea.Subtitle] Item not found in library: {ItemId}", itemId);
                     return null;
                 }
 
@@ -88,12 +86,12 @@ namespace Cavea.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "[Cavea.Subtitle] FromBaseItem threw exception");
+                    _logger.LogError(ex, "⚪  [Cavea.Subtitle] FromBaseItem threw exception");
                 }
 
                 if (stremioUri == null)
                 {
-                    _logger.LogWarning("[Cavea.Subtitle] Could not build StremioUri for item {ItemId}", itemId);
+                    _logger.LogWarning("⚪  [Cavea.Subtitle] Could not build StremioUri for item {ItemId}", itemId);
                     return null;
                 }
 
@@ -121,7 +119,7 @@ namespace Cavea.Services
 
                 if (cachedSubs == null)
                 {
-                    _logger.LogInformation("[Cavea.Subtitle] GetSubtitlesAsync result is NULL for {ItemId}", itemId);
+                    _logger.LogInformation("⚪  [Cavea.Subtitle] GetSubtitlesAsync result is NULL for {ItemId}", itemId);
                     return null;
                 }
 
@@ -142,7 +140,7 @@ namespace Cavea.Services
                         {
                             Url = url,
                             Language = lang,
-                            Title = title ?? lang ?? "Unknown",
+                            Title = GetLanguageDisplayName(lang) ?? title ?? "Unknown", // Prefer pretty name
                             Id = id
                         });
                     }
@@ -150,15 +148,53 @@ namespace Cavea.Services
 
                 if (subtitles.Count > 0)
                 {
-                    _logger.LogInformation("[Cavea.Subtitle] Fetched {Count} external subtitles for {ItemId}", subtitles.Count, itemId);
+                    _logger.LogInformation("⚪  [Cavea.Subtitle] Fetched {Count} external subtitles for {ItemId}", subtitles.Count, itemId);
                 }
 
                 return subtitles;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[Cavea.Subtitle] EXCEPTION in FetchExternalSubtitlesAsync for {ItemId}: {Message}", itemId, ex.Message);
+                _logger.LogError(ex, "⚪  [Cavea.Subtitle] EXCEPTION in FetchExternalSubtitlesAsync for {ItemId}: {Message}", itemId, ex.Message);
                 return null;
+            }
+        }
+
+        private string GetLanguageDisplayName(string? langCode)
+        {
+            if (string.IsNullOrEmpty(langCode)) return "Unknown";
+            try
+            {
+                // Map common codes to full names using CultureInfo or switch
+                return langCode.ToLowerInvariant() switch
+                {
+                    "eng" => "English",
+                    "spa" => "Spanish",
+                    "fre" => "French",
+                    "ger" => "German",
+                    "ita" => "Italian",
+                    "jpn" => "Japanese",
+                    "chi" => "Chinese",
+                    "zho" => "Chinese",
+                    "rus" => "Russian",
+                    "por" => "Portuguese",
+                    "dut" => "Dutch",
+                    "lat" => "Latin",
+                    "kor" => "Korean",
+                    "swe" => "Swedish",
+                    "fin" => "Finnish",
+                    "nor" => "Norwegian",
+                    "dan" => "Danish",
+                    "pol" => "Polish",
+                    "tur" => "Turkish",
+                    "hin" => "Hindi",
+                    "und" => "Undetermined",
+                    _ => new CultureInfo(langCode).DisplayName
+                };
+            }
+            catch
+            {
+                return langCode;
             }
         }
     }

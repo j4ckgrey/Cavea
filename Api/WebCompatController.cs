@@ -62,7 +62,7 @@ namespace Cavea.Api
         {
             try
             {
-                _logger.LogInformation("[Cavea] GetWebCompatibleVersions: ItemId={ItemId}, FilterWebOnly={FilterWebOnly}", itemId, filterWebOnly);
+                _logger.LogInformation("⚪  [Cavea] GetWebCompatibleVersions: ItemId={ItemId}, FilterWebOnly={FilterWebOnly}", itemId, filterWebOnly);
 
                 if (!Guid.TryParse(itemId, out var itemGuid))
                 {
@@ -79,7 +79,7 @@ namespace Cavea.Api
                 var mediaSourceResult = await _mediaSourceManager.GetPlaybackMediaSources(item, null, true, true, CancellationToken.None);
                 var allSources = mediaSourceResult.ToList();
 
-                _logger.LogInformation("[Cavea] Got {Count} total MediaSources from Jellyfin", allSources.Count);
+                _logger.LogInformation("⚪  [Cavea] Got {Count} total MediaSources from Jellyfin", allSources.Count);
 
                 if (!filterWebOnly)
                 {
@@ -127,7 +127,7 @@ namespace Cavea.Api
                         
                         if (webCompatLookup.TryGetValue(infoHash, out var isCompatible))
                         {
-                            _logger.LogDebug("[Cavea] MediaSource {Name} matched by InfoHash: {Compatible}", source.Name, isCompatible);
+                            _logger.LogDebug("⚪  [Cavea] MediaSource {Name} matched by InfoHash: {Compatible}", source.Name, isCompatible);
                             return isCompatible;
                         }
                     }
@@ -135,21 +135,21 @@ namespace Cavea.Api
                     // Try direct URL match
                     if (webCompatLookup.TryGetValue(path, out var isCompat))
                     {
-                        _logger.LogDebug("[Cavea] MediaSource {Name} matched by URL: {Compatible}", source.Name, isCompat);
+                        _logger.LogDebug("⚪  [Cavea] MediaSource {Name} matched by URL: {Compatible}", source.Name, isCompat);
                         return isCompat;
                     }
                     
                     // No match found - exclude to be safe
-                    _logger.LogDebug("[Cavea] MediaSource {Name} not found in cache, excluding", source.Name);
+                    _logger.LogDebug("⚪  [Cavea] MediaSource {Name} not found in cache, excluding", source.Name);
                     return false;
                 }).ToList();
 
-                _logger.LogInformation("[Cavea] Filtered to {Count}/{Total} web-compatible sources", compatibleSources.Count, allSources.Count);
+                _logger.LogInformation("⚪  [Cavea] Filtered to {Count}/{Total} web-compatible sources", compatibleSources.Count, allSources.Count);
 
                 // If filtering leaves us with 0 sources, return all sources so transcoding is still possible
                 if (compatibleSources.Count == 0 && allSources.Count > 0)
                 {
-                    _logger.LogWarning("[Cavea] No compatible sources found, returning all {Count} sources for transcoding fallback", allSources.Count);
+                    _logger.LogWarning("⚪  [Cavea] No compatible sources found, returning all {Count} sources for transcoding fallback", allSources.Count);
                     return Ok(new { MediaSources = allSources });
                 }
 
@@ -157,7 +157,7 @@ namespace Cavea.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[Cavea] Error getting web-compatible versions");
+                _logger.LogError(ex, "⚪  [Cavea] Error getting web-compatible versions");
                 return StatusCode(500, new { error = ex.Message });
             }
         }
@@ -170,7 +170,7 @@ namespace Cavea.Api
 
             if (audioStreams == null || !audioStreams.Any())
             {
-                _logger.LogWarning("[Cavea]  Source {SourceId} has no audio streams", source.Id);
+                _logger.LogWarning("⚪  [Cavea]  Source {SourceId} has no audio streams", source.Id);
                 return false;
             }
 
@@ -178,7 +178,7 @@ namespace Cavea.Api
             {
                 var codec = audio.Codec?.ToLowerInvariant() ?? "";
                 
-                _logger.LogDebug("[Cavea]  Checking audio: Codec={Codec}, Index={Index}", codec, audio.Index);
+                _logger.LogDebug("⚪  [Cavea]  Checking audio: Codec={Codec}, Index={Index}", codec, audio.Index);
 
                 // If codec contains incompatible strings, skip this audio track
                 if (IncompatibleAudioCodecs.Any(bad => codec.Contains(bad)))
@@ -189,12 +189,12 @@ namespace Cavea.Api
                 // If codec contains compatible strings, this source is good
                 if (WebAudioCodecs.Any(good => codec.Contains(good)))
                 {
-                    _logger.LogInformation("[Cavea]  Source {SourceId} has compatible audio: {Codec}", source.Id, codec);
+                    _logger.LogInformation("⚪  [Cavea]  Source {SourceId} has compatible audio: {Codec}", source.Id, codec);
                     return true;
                 }
             }
 
-            _logger.LogWarning("[Cavea]  Source {SourceId} has NO compatible audio tracks", source.Id);
+            _logger.LogWarning("⚪  [Cavea]  Source {SourceId} has NO compatible audio tracks", source.Id);
             return false;
         }
 

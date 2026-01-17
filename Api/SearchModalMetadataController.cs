@@ -34,7 +34,7 @@ namespace Cavea.Api
             [FromQuery] string? imdbId,
             [FromQuery] string? itemType) // "movie" or "series"
         {
-            _logger.LogInformation("[Cavea.SearchMetadata] GetSearchMetadata: tmdbId={TmdbId}, imdbId={ImdbId}, itemType={ItemType}", 
+            _logger.LogInformation("⚪  [Cavea.SearchMetadata] GetSearchMetadata: tmdbId={TmdbId}, imdbId={ImdbId}, itemType={ItemType}", 
                 tmdbId ?? "null", imdbId ?? "null", itemType ?? "null");
             
             try
@@ -81,7 +81,7 @@ namespace Cavea.Api
                      try 
                      {
                          var json = JsonSerializer.Serialize(gelatoData);
-                         _logger.LogInformation("[Cavea.SearchMetadata] Gelato response: {Json}", json);
+                         _logger.LogInformation("⚪  [Cavea.SearchMetadata] Gelato response: {Json}", json);
 
                          // Robust Mapping
                          using var doc = JsonDocument.Parse(json);
@@ -131,7 +131,7 @@ namespace Cavea.Api
                      }
                      catch(Exception ex)
                      {
-                         _logger.LogError(ex, "[Cavea.SearchMetadata] Error mapping Gelato response");
+                         _logger.LogError(ex, "⚪  [Cavea.SearchMetadata] Error mapping Gelato response");
                          return Ok(gelatoData); // Fallback
                      }
                 }
@@ -140,7 +140,7 @@ namespace Cavea.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[Cavea.SearchMetadata] Error getting metadata from Gelato");
+                _logger.LogError(ex, "⚪  [Cavea.SearchMetadata] Error getting metadata from Gelato");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -206,7 +206,7 @@ namespace Cavea.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[Cavea.SearchMetadata] Reflection error fetching from Gelato");
+                _logger.LogError(ex, "⚪  [Cavea.SearchMetadata] Reflection error fetching from Gelato");
                 return null;
             }
         }
