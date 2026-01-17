@@ -40,15 +40,8 @@ namespace Cavea.Services
                     return null;
                 }
 
-                // Check if already cached
-                var cached = await _dbService.GetExternalSubtitlesAsync(itemId);
-                if (cached != null && cached.Count > 0)
-                {
-                    _logger.LogInformation("[Cavea.Subtitle] Using {Count} cached external subtitles for {ItemId}", cached.Count, itemId);
-                    return cached;
-                }
-
-                _logger.LogInformation("⚪ [Cavea.Subtitle] No cache, fetching from Gelato...");
+                // Fetch directly from Gelato (no caching)
+                _logger.LogInformation("⚪ [Cavea.Subtitle] Fetching from Gelato...");
 
                 if (!Guid.TryParse(itemId, out var itemGuid))
                 {

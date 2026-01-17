@@ -9,6 +9,15 @@
     "imageUrl": "https://raw.githubusercontent.com/j4ckgrey/Cavea/main/Cavea.png",
     "versions": [
       {
+        "version": "0.1.1.2",
+        "changelog": "Removed subtitle caching - external subtitles now fetched directly from Gelato each time.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/j4ckgrey/Cavea/releases/download/v0.1.1.2/Cavea_0.1.1.2.zip",
+        "checksum": "6aaa2078ebcfa2a86ff090a6ac9ebc6a",
+        "checksumType": "md5",
+        "timestamp": "2026-01-17T15:40:00Z"
+      },
+      {
         "version": "0.1.1.1",
         "changelog": "Modified reviews API endpoint for RapidAPI v2, removed stream/catalog/subtitle caching to simplify database (reviews only), and standardized log messages with ⚪ emoji.",
         "targetAbi": "10.11.0.0",
