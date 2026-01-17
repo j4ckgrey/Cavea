@@ -167,7 +167,7 @@
             params.append('includeCredits', 'false');
             params.append('includeReviews', 'false');
 
-            const url = window.ApiClient.getUrl('api/cavea/metadata/tmdb') + '?' + params.toString();
+            const url = window.ApiClient.getUrl('api/cavea/metadata/search') + '?' + params.toString();
             const response = await window.ApiClient.ajax({
                 type: 'GET',
                 url: url,
@@ -191,7 +191,7 @@
             params.append('includeCredits', 'true');
             params.append('includeReviews', 'true');
 
-            const url = window.ApiClient.getUrl('api/cavea/metadata/tmdb') + '?' + params.toString();
+            const url = window.ApiClient.getUrl('api/cavea/metadata/search') + '?' + params.toString();
             const response = await window.ApiClient.ajax({
                 type: 'GET',
                 url: url,

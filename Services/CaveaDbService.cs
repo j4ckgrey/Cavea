@@ -293,6 +293,17 @@ namespace Cavea.Services
                     CREATE INDEX IF NOT EXISTS idx_catalogitems_imdbid ON CatalogItems(ImdbId);
                     CREATE INDEX IF NOT EXISTS idx_catalogitems_status ON CatalogItems(Status);
                     CREATE INDEX IF NOT EXISTS idx_catalogitems_type ON CatalogItems(ItemType);
+
+                    CREATE TABLE IF NOT EXISTS TmdbEpisodeCache (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        TmdbSeriesId TEXT NOT NULL,
+                        SeasonNumber INTEGER NOT NULL,
+                        EpisodeNumber INTEGER NOT NULL,
+                        JsonData TEXT NOT NULL,
+                        CachedAt TEXT NOT NULL,
+                        UNIQUE(TmdbSeriesId, SeasonNumber, EpisodeNumber)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_tmdbepisodecache_lookup ON TmdbEpisodeCache(TmdbSeriesId, SeasonNumber, EpisodeNumber);
                 ";
 
 
@@ -789,6 +800,75 @@ namespace Cavea.Services
             {
                 _logger.LogError(ex, "⚪  [CaveaDb] Failed to save collection {CollectionId}", collection.CollectionId);
                 return false;
+            }
+        }
+
+        #endregion
+
+        #region TMDB Episode Caching
+
+        public async Task<bool> SaveTmdbEpisodeAsync(string tmdbSeriesId, int season, int episode, string jsonData)
+        {
+            try
+            {
+                EnsureConnection();
+                using var cmd = _connection!.CreateCommand();
+                cmd.CommandText = @"
+                    INSERT INTO TmdbEpisodeCache (TmdbSeriesId, SeasonNumber, EpisodeNumber, JsonData, CachedAt)
+                    VALUES (@sid, @sn, @en, @json, @date)
+                    ON CONFLICT(TmdbSeriesId, SeasonNumber, EpisodeNumber) DO UPDATE SET
+                        JsonData = @json,
+                        CachedAt = @date
+                ";
+                cmd.Parameters.AddWithValue("@sid", tmdbSeriesId);
+                cmd.Parameters.AddWithValue("@sn", season);
+                cmd.Parameters.AddWithValue("@en", episode);
+                cmd.Parameters.AddWithValue("@json", jsonData);
+                cmd.Parameters.AddWithValue("@date", DateTime.UtcNow.ToString("o"));
+
+                await cmd.ExecuteNonQueryAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to cache TMDB episode {Sid} S{Sn}E{En}", tmdbSeriesId, season, episode);
+                return false;
+            }
+        }
+
+        public async Task<string?> GetTmdbEpisodeAsync(string tmdbSeriesId, int season, int episode)
+        {
+            try
+            {
+                EnsureConnection();
+                using var cmd = _connection!.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT JsonData, CachedAt FROM TmdbEpisodeCache
+                    WHERE TmdbSeriesId = @sid AND SeasonNumber = @sn AND EpisodeNumber = @en
+                ";
+                cmd.Parameters.AddWithValue("@sid", tmdbSeriesId);
+                cmd.Parameters.AddWithValue("@sn", season);
+                cmd.Parameters.AddWithValue("@en", episode);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    var cachedAtStr = reader.GetString(1);
+                    if (DateTime.TryParse(cachedAtStr, out var cachedAt))
+                    {
+                        // Cache valid for 7 days
+                        if (DateTime.UtcNow - cachedAt < TimeSpan.FromDays(7))
+                        {
+                            return reader.GetString(0);
+                        }
+                    }
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get cached TMDB episode {Sid} S{Sn}E{En}", tmdbSeriesId, season, episode);
+                return null;
             }
         }
 

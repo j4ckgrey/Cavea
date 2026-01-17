@@ -32,7 +32,8 @@ namespace Cavea.Api
         public async Task<ActionResult> GetSearchMetadata(
             [FromQuery] string? tmdbId,
             [FromQuery] string? imdbId,
-            [FromQuery] string? itemType) // "movie" or "series"
+            [FromQuery] string? itemType, // "movie" or "series"
+            [FromQuery] bool includeCredits = false)
         {
             _logger.LogInformation("⚪  [Cavea.SearchMetadata] GetSearchMetadata: tmdbId={TmdbId}, imdbId={ImdbId}, itemType={ItemType}", 
                 tmdbId ?? "null", imdbId ?? "null", itemType ?? "null");
@@ -63,13 +64,15 @@ namespace Cavea.Api
                     mediaTypeEnum = 1; // StremioMediaType.Movie
                 }
                 else if (string.Equals(itemType, "series", StringComparison.OrdinalIgnoreCase) || 
-                         string.Equals(itemType, "tv", StringComparison.OrdinalIgnoreCase))
+                         string.Equals(itemType, "tv", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(itemType, "episode", StringComparison.OrdinalIgnoreCase))
                 {
+                    // Episodes use series type in Gelato - the IMDB ID identifies the episode
                     mediaTypeEnum = 2; // StremioMediaType.Series
                 }
                 else
                 {
-                    return BadRequest(new { error = "Invalid or missing itemType (must be 'movie' or 'series')" });
+                    return BadRequest(new { error = "Invalid or missing itemType (must be 'movie', 'series', or 'episode')" });
                 }
 
                 // 3. Reflect into Gelato to get metadata
@@ -126,6 +129,19 @@ namespace Cavea.Api
 
                          var runtimeProp = FindProp(new[] { "Runtime", "Duration" });
                          mapped["runtime"] = runtimeProp?.ToString();
+
+                         var rtProp = FindProp(new[] { "RottenTomatoes", "CriticRating", "TomatoMeter" });
+                         mapped["rottenTomatoes"] = rtProp?.ToString();
+
+                         // Map Credits (Cast)
+                         if (includeCredits)
+                         {
+                             var castProp = FindProp(new[] { "Cast", "Credits", "Actors" });
+                             if (castProp.HasValue && castProp.Value.ValueKind == JsonValueKind.Array)
+                             {
+                                 mapped["credits"] = new { cast = castProp.Value.Clone() };
+                             }
+                         }
 
                          return Ok(mapped);
                      }
