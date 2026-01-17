@@ -154,7 +154,7 @@ namespace Cavea.Api
 
                 if (gelatoPlugin == null)
                 {
-                    _logger.LogWarning("[Cavea.SearchMetadata] Gelato plugin assembly not found");
+                    _logger.LogWarning("⚪ [Cavea.SearchMetadata] Gelato plugin assembly not found");
                     return null;
                 }
 
@@ -165,7 +165,7 @@ namespace Cavea.Api
 
                 if (gelatoInstance == null)
                 {
-                    _logger.LogWarning("[Cavea.SearchMetadata] Gelato plugin instance is null");
+                    _logger.LogWarning("⚪ [Cavea.SearchMetadata] Gelato plugin instance is null");
                     return null;
                 }
 
@@ -187,7 +187,7 @@ namespace Cavea.Api
                 
                 if (getMetaMethod == null)
                 {
-                     _logger.LogError("[Cavea.SearchMetadata] GetMetaAsync method not found on StremioProvider");
+                     _logger.LogError("⚪ [Cavea.SearchMetadata] GetMetaAsync method not found on StremioProvider");
                      return null;
                 }
 

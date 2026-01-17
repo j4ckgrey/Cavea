@@ -23,12 +23,12 @@ namespace Cavea.Api
         [HttpGet]
         public ActionResult<List<MediaRequest>> GetRequests()
         {
-            _logger.LogInformation("[RequestsController] GET called");
+            _logger.LogInformation("⚪ [RequestsController] GET called");
             
             var config = Plugin.Instance?.Configuration;
             if (config == null)
             {
-                _logger.LogWarning("[RequestsController] Config is null");
+                _logger.LogWarning("⚪ [RequestsController] Config is null");
                 return Ok(new List<MediaRequest>());
             }
 
@@ -48,12 +48,12 @@ namespace Cavea.Api
         [HttpPost]
         public ActionResult<MediaRequest> CreateRequest([FromBody] MediaRequest request)
         {
-            _logger.LogInformation("[RequestsController] POST called");
+            _logger.LogInformation("⚪ [RequestsController] POST called");
             
             var config = Plugin.Instance?.Configuration;
             if (config == null)
             {
-                _logger.LogWarning("[RequestsController] Config is null");
+                _logger.LogWarning("⚪ [RequestsController] Config is null");
                 return BadRequest("Plugin configuration not available");
             }
 
@@ -156,7 +156,7 @@ namespace Cavea.Api
             var config = Plugin.Instance?.Configuration;
             if (config == null)
             {
-                _logger.LogWarning("[RequestsController] Config is null");
+                _logger.LogWarning("⚪ [RequestsController] Config is null");
                 return BadRequest("Plugin configuration not available");
             }
 
@@ -340,7 +340,7 @@ namespace Cavea.Api
             var config = Plugin.Instance?.Configuration;
             if (config == null)
             {
-                _logger.LogWarning("[RequestsController] Config is null");
+                _logger.LogWarning("⚪ [RequestsController] Config is null");
                 return BadRequest("Plugin configuration not available");
             }
 
@@ -362,7 +362,7 @@ namespace Cavea.Api
         [HttpPost("cleanup")]
         public ActionResult CleanupRequests()
         {
-            _logger.LogInformation("[RequestsController] Cleanup called");
+            _logger.LogInformation("⚪ [RequestsController] Cleanup called");
             
             var config = Plugin.Instance?.Configuration;
             if (config == null)

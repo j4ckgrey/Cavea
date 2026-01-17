@@ -59,7 +59,7 @@ namespace Cavea.Services
                 var addonUrl = GetGelatoStremioUrl();
                 if (string.IsNullOrEmpty(addonUrl)) 
                 {
-                    _logger.LogWarning("[Cavea.Stream] Cannot resolve stremio URL: Gelato addon URL not found in config");
+                    _logger.LogWarning("⚪ [Cavea.Stream] Cannot resolve stremio URL: Gelato addon URL not found in config");
                     return null;
                 }
                 

@@ -36,7 +36,7 @@ namespace Cavea.Services
                 var cfg = Plugin.Instance?.Configuration;
                 if (cfg == null || !cfg.EnableExternalSubtitles)
                 {
-                    _logger.LogInformation("[Cavea.Subtitle] External subtitles DISABLED in config or config is NULL");
+                    _logger.LogInformation("⚪ [Cavea.Subtitle] External subtitles DISABLED in config or config is NULL");
                     return null;
                 }
 
@@ -48,7 +48,7 @@ namespace Cavea.Services
                     return cached;
                 }
 
-                _logger.LogInformation("[Cavea.Subtitle] No cache, fetching from Gelato...");
+                _logger.LogInformation("⚪ [Cavea.Subtitle] No cache, fetching from Gelato...");
 
                 if (!Guid.TryParse(itemId, out var itemGuid))
                 {
@@ -61,7 +61,7 @@ namespace Cavea.Services
 
                 if (gelatoPlugin == null)
                 {
-                    _logger.LogWarning("[Cavea.Subtitle] Gelato plugin assembly NOT FOUND");
+                    _logger.LogWarning("⚪ [Cavea.Subtitle] Gelato plugin assembly NOT FOUND");
                     return null;
                 }
 
@@ -71,7 +71,7 @@ namespace Cavea.Services
 
                 if (gelatoInstance == null)
                 {
-                    _logger.LogWarning("[Cavea.Subtitle] Gelato plugin instance is NULL");
+                    _logger.LogWarning("⚪ [Cavea.Subtitle] Gelato plugin instance is NULL");
                     return null;
                 }
 
@@ -155,8 +155,7 @@ namespace Cavea.Services
 
                 if (subtitles.Count > 0)
                 {
-                    await _dbService.SaveExternalSubtitlesAsync(itemId, subtitles);
-                    _logger.LogInformation("[Cavea.Subtitle] Fetched and cached {Count} external subtitles for {ItemId}", subtitles.Count, itemId);
+                    _logger.LogInformation("[Cavea.Subtitle] Fetched {Count} external subtitles for {ItemId}", subtitles.Count, itemId);
                 }
 
                 return subtitles;

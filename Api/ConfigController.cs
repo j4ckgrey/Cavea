@@ -76,28 +76,28 @@ namespace Cavea.Api
         [Authorize]
         public ActionResult SetConfig([FromBody] ConfigDto dto)
         {
-            _logger.LogInformation("[ConfigController] PUT request received");
+            _logger.LogInformation("⚪ [ConfigController] PUT request received");
             
             // Basic admin check
             var user = HttpContext.User;
             var isAdmin = user?.IsInRole("Administrator") ?? false;
             
-            _logger.LogInformation("[ConfigController] User admin check: {IsAdmin}, User: {User}", isAdmin, user?.Identity?.Name ?? "anonymous");
+            _logger.LogInformation("⚪ [ConfigController] User admin check: {IsAdmin}, User: {User}", isAdmin, user?.Identity?.Name ?? "anonymous");
             
             if (!isAdmin)
             {
-                _logger.LogWarning("[ConfigController] PUT rejected - user is not admin");
+                _logger.LogWarning("⚪ [ConfigController] PUT rejected - user is not admin");
                 return Forbid();
             }
 
             var cfg = Plugin.Instance?.Configuration;
             if (cfg == null)
             {
-                _logger.LogError("[ConfigController] Configuration not available");
+                _logger.LogError("⚪ [ConfigController] Configuration not available");
                 return BadRequest("Configuration not available");
             }
 
-            _logger.LogInformation("[ConfigController] Updating config");
+            _logger.LogInformation("⚪ [ConfigController] Updating config");
 
             cfg.DefaultTmdbId = dto?.defaultTmdbId?.Trim();
             cfg.TmdbApiKey = dto?.tmdbApiKey?.Trim();
@@ -179,7 +179,7 @@ namespace Cavea.Api
             }
             
             Plugin.Instance.SaveConfiguration();
-            _logger.LogInformation("[ConfigController] Configuration saved.");
+            _logger.LogInformation("⚪ [ConfigController] Configuration saved.");
             return Ok();
         }
     }

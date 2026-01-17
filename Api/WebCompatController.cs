@@ -92,7 +92,7 @@ namespace Cavea.Api
                 
                 if (cachedStreams == null || cachedStreams.Count == 0)
                 {
-                    _logger.LogWarning("[Cavea] No cached streams found in DB, cannot filter by web compatibility. Returning all sources.");
+                    _logger.LogWarning("⚪ [Cavea] No cached streams found in DB, cannot filter by web compatibility. Returning all sources.");
                     return Ok(new { MediaSources = allSources });
                 }
 
@@ -170,7 +170,7 @@ namespace Cavea.Api
 
             if (audioStreams == null || !audioStreams.Any())
             {
-                _logger.LogWarning("[Cavea] 🟢 Source {SourceId} has no audio streams", source.Id);
+                _logger.LogWarning("[Cavea]  Source {SourceId} has no audio streams", source.Id);
                 return false;
             }
 
@@ -178,7 +178,7 @@ namespace Cavea.Api
             {
                 var codec = audio.Codec?.ToLowerInvariant() ?? "";
                 
-                _logger.LogDebug("[Cavea] 🟢 Checking audio: Codec={Codec}, Index={Index}", codec, audio.Index);
+                _logger.LogDebug("[Cavea]  Checking audio: Codec={Codec}, Index={Index}", codec, audio.Index);
 
                 // If codec contains incompatible strings, skip this audio track
                 if (IncompatibleAudioCodecs.Any(bad => codec.Contains(bad)))
@@ -189,12 +189,12 @@ namespace Cavea.Api
                 // If codec contains compatible strings, this source is good
                 if (WebAudioCodecs.Any(good => codec.Contains(good)))
                 {
-                    _logger.LogInformation("[Cavea] 🟢 Source {SourceId} has compatible audio: {Codec}", source.Id, codec);
+                    _logger.LogInformation("[Cavea]  Source {SourceId} has compatible audio: {Codec}", source.Id, codec);
                     return true;
                 }
             }
 
-            _logger.LogWarning("[Cavea] 🟢 Source {SourceId} has NO compatible audio tracks", source.Id);
+            _logger.LogWarning("[Cavea]  Source {SourceId} has NO compatible audio tracks", source.Id);
             return false;
         }
 
@@ -208,7 +208,7 @@ namespace Cavea.Api
         {
             try
             {
-                _logger.LogInformation("🟢 Analyzing web compatibility for ItemId: {ItemId}", itemId);
+                _logger.LogInformation(" Analyzing web compatibility for ItemId: {ItemId}", itemId);
 
                 _dbService.EnsureConnection();
                 var conn = _dbService._connection;
@@ -273,7 +273,7 @@ namespace Cavea.Api
                         incompatible++;
                 }
 
-                _logger.LogInformation("🟢 Analysis complete: {Compatible} compatible, {Incompatible} incompatible", 
+                _logger.LogInformation(" Analysis complete: {Compatible} compatible, {Incompatible} incompatible", 
                     compatible, incompatible);
 
                 return Ok(new
@@ -286,7 +286,7 @@ namespace Cavea.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🟢 Error analyzing streams for ItemId: {ItemId}", itemId);
+                _logger.LogError(ex, " Error analyzing streams for ItemId: {ItemId}", itemId);
                 return StatusCode(500, new { error = ex.Message });
             }
         }
@@ -301,7 +301,7 @@ namespace Cavea.Api
         {
             try
             {
-                _logger.LogInformation("🟢 Fetching web-compatible streams for ItemId: {ItemId}", itemId);
+                _logger.LogInformation(" Fetching web-compatible streams for ItemId: {ItemId}", itemId);
 
                 _dbService.EnsureConnection();
                 var conn = _dbService._connection;
@@ -335,11 +335,11 @@ namespace Cavea.Api
                     }
                 }
                 
-                _logger.LogInformation("🟢 Found {Count} total cached streams", allStreams.Count);
+                _logger.LogInformation(" Found {Count} total cached streams", allStreams.Count);
                 
                 if (!allStreams.Any())
                 {
-                    _logger.LogWarning("🟢 No cached streams found for ItemId: {ItemId}", itemId);
+                    _logger.LogWarning(" No cached streams found for ItemId: {ItemId}", itemId);
                     return NotFound(new { message = "No cached streams found. Please fetch streams first." });
                 }
 
@@ -411,7 +411,7 @@ namespace Cavea.Api
                     }
                 }
 
-                _logger.LogInformation("🟢 Found {Count} web-compatible streams", compatibleStreams.Count);
+                _logger.LogInformation(" Found {Count} web-compatible streams", compatibleStreams.Count);
 
                 return Ok(new
                 {
@@ -423,7 +423,7 @@ namespace Cavea.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🟢 Error fetching compatible streams for ItemId: {ItemId}", itemId);
+                _logger.LogError(ex, " Error fetching compatible streams for ItemId: {ItemId}", itemId);
                 return StatusCode(500, new { error = ex.Message });
             }
         }
@@ -447,7 +447,7 @@ namespace Cavea.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🟢 Failed to update WebCompatible flag for stream {StreamId}", streamId);
+                _logger.LogError(ex, " Failed to update WebCompatible flag for stream {StreamId}", streamId);
             }
         }
     }

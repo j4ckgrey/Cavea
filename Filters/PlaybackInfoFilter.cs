@@ -43,7 +43,7 @@ public class PlaybackInfoMiddleware
         // Only log when it's actually a PlaybackInfo request or when filtering would happen
         if (isPlaybackInfo)
         {
-            _logger.LogInformation("[Cavea] 🟢 PlaybackInfo request: DirectPlayOnly={DirectPlayOnly}", directPlayOnly);
+            _logger.LogInformation("[Cavea]  PlaybackInfo request: DirectPlayOnly={DirectPlayOnly}", directPlayOnly);
         }
 
         if (!isPlaybackInfo || !directPlayOnly)
@@ -52,7 +52,7 @@ public class PlaybackInfoMiddleware
             return;
         }
 
-        _logger.LogInformation("[Cavea] 🟢 INTERCEPTING PlaybackInfo request for web compatibility filtering");
+        _logger.LogInformation("⚪ [Cavea]  INTERCEPTING PlaybackInfo request for web compatibility filtering");
 
         // Capture the response
         var originalBodyStream = context.Response.Body;
@@ -72,10 +72,10 @@ public class PlaybackInfoMiddleware
             if (json.RootElement.TryGetProperty("MediaSources", out var mediaSources))
             {
                 var sources = mediaSources.EnumerateArray().ToList();
-                _logger.LogInformation("[Cavea] 🟢 Filtering {Count} media sources", sources.Count);
+                _logger.LogInformation("[Cavea]  Filtering {Count} media sources", sources.Count);
 
                 var filteredSources = sources.Where(source => HasWebCompatibleAudio(source)).ToList();
-                _logger.LogInformation("[Cavea] 🟢 Filtered to {Count} web-compatible sources", filteredSources.Count);
+                _logger.LogInformation("[Cavea]  Filtered to {Count} web-compatible sources", filteredSources.Count);
 
                 // Rebuild the JSON with filtered sources
                 using var stream = new MemoryStream();
@@ -107,7 +107,7 @@ public class PlaybackInfoMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[Cavea] 🟢 Error filtering PlaybackInfo response");
+            _logger.LogError(ex, "[Cavea]  Error filtering PlaybackInfo response");
         }
 
         // Write the modified response

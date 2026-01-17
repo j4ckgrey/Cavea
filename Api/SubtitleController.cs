@@ -95,26 +95,26 @@ namespace Cavea.Api
             [FromQuery] string? subId,
             [FromQuery] string? format) // "vtt" for web clients that need conversion
         {
-            _logger.LogInformation("[Cavea.Subtitle] 🔵 [SUBTITLE PROXY] Request received: itemId={ItemId}, lang={Lang}, subId={SubId}, format={Format}", itemId, lang, subId, format);
+            _logger.LogInformation("[Cavea.Subtitle]  [SUBTITLE PROXY] Request received: itemId={ItemId}, lang={Lang}, subId={SubId}, format={Format}", itemId, lang, subId, format);
 
             if (string.IsNullOrEmpty(itemId))
             {
-                _logger.LogWarning("[Cavea.Subtitle] 🔴 [SUBTITLE PROXY] Invalid itemId: empty or null");
+                _logger.LogWarning("⚪ [Cavea.Subtitle]  [SUBTITLE PROXY] Invalid itemId: empty or null");
                 return BadRequest("Invalid itemId");
             }
 
             try
             {
                 // Get from cache via DB service directly as it's just retrieval
-                _logger.LogInformation("[Cavea.Subtitle] 🔵 [SUBTITLE PROXY] Fetching cached subtitles for item {ItemId}...", itemId);
+                _logger.LogInformation("[Cavea.Subtitle]  [SUBTITLE PROXY] Fetching cached subtitles for item {ItemId}...", itemId);
                 var subtitles = await _dbService.GetExternalSubtitlesAsync(itemId);
                 if (subtitles == null || subtitles.Count == 0)
                 {
-                    _logger.LogWarning("[Cavea.Subtitle] 🔴 [SUBTITLE PROXY] No cached subtitles found for item {ItemId}", itemId);
+                    _logger.LogWarning("[Cavea.Subtitle]  [SUBTITLE PROXY] No cached subtitles found for item {ItemId}", itemId);
                     return NotFound("No cached subtitles");
                 }
                 
-                _logger.LogInformation("[Cavea.Subtitle] 🔵 [SUBTITLE PROXY] Found {Count} cached subtitles for item {ItemId}", subtitles.Count, itemId);
+                _logger.LogInformation("[Cavea.Subtitle]  [SUBTITLE PROXY] Found {Count} cached subtitles for item {ItemId}", subtitles.Count, itemId);
 
                 // Find matching subtitle
                 ExternalSubtitleInfo? targetSub = null;
@@ -133,11 +133,11 @@ namespace Cavea.Api
 
                 if (targetSub == null || string.IsNullOrEmpty(targetSub.Url))
                 {
-                    _logger.LogWarning("[Cavea.Subtitle] 🔴 [SUBTITLE PROXY] No matching subtitle found. Looking for: subId={SubId}, lang={Lang}", subId, lang);
+                    _logger.LogWarning("[Cavea.Subtitle]  [SUBTITLE PROXY] No matching subtitle found. Looking for: subId={SubId}, lang={Lang}", subId, lang);
                     return NotFound("Subtitle not found");
                 }
 
-                _logger.LogInformation("[Cavea.Subtitle] 🔵 [SUBTITLE PROXY] Found match: id={Id}, title={Title}, url={Url}", targetSub.Id, targetSub.Title, targetSub.Url);
+                _logger.LogInformation("[Cavea.Subtitle]  [SUBTITLE PROXY] Found match: id={Id}, title={Title}, url={Url}", targetSub.Id, targetSub.Title, targetSub.Url);
 
                 // Fetch subtitle content from original URL
                 var response = await _httpClient.GetAsync(targetSub.Url);
@@ -158,7 +158,7 @@ namespace Cavea.Api
                     // Check if it's NOT already VTT
                     if (!contentStr.TrimStart().StartsWith("WEBVTT", StringComparison.OrdinalIgnoreCase))
                     {
-                        _logger.LogInformation("[Cavea.Subtitle] Converting SRT to VTT for web client");
+                        _logger.LogInformation("⚪ [Cavea.Subtitle] Converting SRT to VTT for web client");
                         // Convert SRT to VTT: Add header and fix timestamps (comma -> dot)
                         var vttContent = "WEBVTT\n\n" + Regex.Replace(contentStr, @"(\d{2}:\d{2}:\d{2}),(\d{3})", "$1.$2");
                         content = Encoding.UTF8.GetBytes(vttContent);
@@ -166,7 +166,7 @@ namespace Cavea.Api
                     contentType = "text/vtt";
                 }
 
-                _logger.LogInformation("[Cavea.Subtitle] Serving subtitle for {ItemId}: {Bytes} bytes, format={Format}", itemId, content.Length, needsVttConversion ? "vtt" : "original");
+                _logger.LogInformation("⚪ [Cavea.Subtitle] Serving subtitle for {ItemId}: {Bytes} bytes, format={Format}", itemId, content.Length, needsVttConversion ? "vtt" : "original");
                 
                 Response.Headers["Access-Control-Allow-Origin"] = "*";
                 return File(content, needsVttConversion ? "text/vtt" : contentType);
@@ -242,22 +242,22 @@ namespace Cavea.Api
                 string vttContent;
                 if (IsSrt(content))
                 {
-                    _logger.LogInformation("[Cavea.Subtitle] Detected SRT format, converting to VTT");
+                    _logger.LogInformation("⚪ [Cavea.Subtitle] Detected SRT format, converting to VTT");
                     vttContent = ConvertSrtToVtt(content);
                 }
                 else if (IsAss(content))
                 {
-                    _logger.LogInformation("[Cavea.Subtitle] Detected ASS/SSA format, converting to VTT");
+                    _logger.LogInformation("⚪ [Cavea.Subtitle] Detected ASS/SSA format, converting to VTT");
                     vttContent = ConvertAssToVtt(content);
                 }
                 else if (IsVtt(content))
                 {
-                    _logger.LogInformation("[Cavea.Subtitle] Already VTT format, returning as-is");
+                    _logger.LogInformation("⚪ [Cavea.Subtitle] Already VTT format, returning as-is");
                     vttContent = content;
                 }
                 else
                 {
-                    _logger.LogWarning("[Cavea.Subtitle] Unknown subtitle format, attempting SRT conversion");
+                    _logger.LogWarning("⚪ [Cavea.Subtitle] Unknown subtitle format, attempting SRT conversion");
                     vttContent = ConvertSrtToVtt(content);
                 }
 

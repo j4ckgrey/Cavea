@@ -123,21 +123,11 @@ namespace Cavea.Api
                     });
                 }
 
-                // Save to database
-                var success = await _dbService.SaveStreamsAsync(
-                    request.ItemId,
-                    request.StremioId,
-                    request.ImdbId,
-                    request.TmdbId,
-                    request.ItemType ?? "unknown",
-                    request.UserId,
-                    streams
-                );
-
+                // NO DB SAVING - streams flow through Gelato directly
                 return Ok(new CacheStreamsResponse
                 {
-                    Success = success,
-                    Message = success ? "Streams cached successfully" : "Failed to cache streams",
+                    Success = true,
+                    Message = "Streams processed successfully",
                     StreamCount = streams.Count
                 });
             }
@@ -165,7 +155,7 @@ namespace Cavea.Api
                 return BadRequest("At least one of StremioId, ImdbId, or TmdbId is required");
             }
 
-            _logger.LogInformation("[StreamCache] Fetching RAW streams for inspection");
+            _logger.LogInformation("⚪ [StreamCache] Fetching RAW streams for inspection");
 
             try
             {
@@ -352,23 +342,13 @@ namespace Cavea.Api
                     });
                 }
 
-                // 5. No cache, save fresh streams and return them
-                _logger.LogInformation("[StreamCache] No cache found, saving {Count} fresh streams", freshStreams.Count);
-                
-                await _dbService.SaveStreamsAsync(
-                    itemId,
-                    stremioId,
-                    imdbId,
-                    tmdbId,
-                    itemType ?? "unknown",
-                    userId,
-                    freshStreams
-                );
+                // 5. No cache, return fresh streams (DB caching disabled)
+                _logger.LogInformation("[StreamCache] Returning {Count} fresh streams", freshStreams.Count);
 
                 return Ok(new SmartGetStreamsResponse
                 {
                     Success = true,
-                    Message = "Fetched and cached new streams",
+                    Message = "Fetched fresh streams",
                     Streams = freshStreams,
                     FromCache = false,
                     HasNewStreams = false,
@@ -462,23 +442,17 @@ namespace Cavea.Api
 
             try
             {
-                var success = await _dbService.SaveProbedStreamsAsync(
-                    request.ItemId,
-                    request.StremioId,
-                    request.StreamSourceId,
-                    request.Streams
-                );
-
+                // NO DB SAVING - probed streams not saved
                 return Ok(new SaveProbedStreamsResponse
                 {
-                    Success = success,
-                    Message = success ? "Probed streams saved successfully" : "Failed to save probed streams",
+                    Success = true,
+                    Message = "⚪ Probed streams processed successfully",
                     StreamCount = request.Streams.Count
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[StreamCache] Error saving probed streams for {ItemId}", request.ItemId);
+                _logger.LogError(ex, "⚪ [StreamCache] Error saving probed streams for {ItemId}", request.ItemId);
                 return StatusCode(500, new SaveProbedStreamsResponse
                 {
                     Success = false,
@@ -540,7 +514,7 @@ namespace Cavea.Api
             var cfg = Plugin.Instance?.Configuration;
             if (cfg == null || string.IsNullOrEmpty(cfg.GelatoBaseUrl))
             {
-                _logger.LogError("[StreamCache] Gelato base URL not configured");
+                _logger.LogError("⚪ [StreamCache] Gelato base URL not configured");
                 throw new InvalidOperationException("Gelato base URL not configured in Cavea settings");
             }
 
@@ -649,14 +623,14 @@ namespace Cavea.Api
 
             if (gelatoAssembly == null)
             {
-                _logger.LogError("[StreamCache] Gelato assembly not found");
+                _logger.LogError("⚪ [StreamCache] Gelato assembly not found");
                 throw new InvalidOperationException("Gelato assembly not found");
             }
 
             var gelatoPluginType = gelatoAssembly.GetType("Gelato.GelatoPlugin");
             if (gelatoPluginType == null)
             {
-                _logger.LogError("[StreamCache] GelatoPlugin type not found");
+                _logger.LogError("⚪ [StreamCache] GelatoPlugin type not found");
                 throw new InvalidOperationException("GelatoPlugin type not found");
             }
 
@@ -665,7 +639,7 @@ namespace Cavea.Api
 
             if (gelatoInstance == null)
             {
-                _logger.LogError("[StreamCache] Gelato instance not found");
+                _logger.LogError("⚪ [StreamCache] Gelato instance not found");
                 throw new InvalidOperationException("Gelato instance not found");
             }
 
@@ -680,24 +654,24 @@ namespace Cavea.Api
             var getConfigMethod = gelatoInstance.GetType().GetMethod("GetConfig");
             if (getConfigMethod == null)
             {
-                _logger.LogError("[StreamCache] GetConfig method not found");
+                _logger.LogError("⚪ [StreamCache] GetConfig method not found");
                 throw new InvalidOperationException("GetConfig method not found in Gelato");
             }
 
             var config = getConfigMethod.Invoke(gelatoInstance, new object[] { userId });
             if (config == null)
             {
-                _logger.LogError("[StreamCache] Gelato config is null");
+                _logger.LogError("⚪ [StreamCache] Gelato config is null");
                 throw new InvalidOperationException("Gelato config is null");
             }
 
-            _logger.LogInformation("[StreamCache] Got Gelato config, checking for stremio field");
+            _logger.LogInformation("⚪ [StreamCache] Got Gelato config, checking for stremio field");
 
             // Get stremio provider from config (it's a field, not a property)
             var stremioField = config.GetType().GetField("stremio", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
             if (stremioField == null)
             {
-                _logger.LogError("[StreamCache] Stremio field not found in config");
+                _logger.LogError("⚪ [StreamCache] Stremio field not found in config");
                 throw new InvalidOperationException("Stremio field not found");
             }
 
@@ -705,7 +679,7 @@ namespace Cavea.Api
 
             if (stremioProvider == null)
             {
-                _logger.LogError("[StreamCache] Stremio provider is null in config");
+                _logger.LogError("⚪ [StreamCache] Stremio provider is null in config");
                 throw new InvalidOperationException("Stremio provider not found");
             }
 
@@ -721,7 +695,7 @@ namespace Cavea.Api
             var stremioMediaTypeEnum = gelatoAssembly.GetType("Gelato.StremioMediaType");
             if (stremioMediaTypeEnum == null)
             {
-                _logger.LogError("[StreamCache] StremioMediaType enum not found");
+                _logger.LogError("⚪ [StreamCache] StremioMediaType enum not found");
                 throw new InvalidOperationException("StremioMediaType enum not found");
             }
 
@@ -734,7 +708,7 @@ namespace Cavea.Api
                 new[] { typeof(string), stremioMediaTypeEnum });
             if (getStreamsMethod == null)
             {
-                _logger.LogError("[StreamCache] GetStreamsAsync method not found");
+                _logger.LogError("⚪ [StreamCache] GetStreamsAsync method not found");
                 throw new InvalidOperationException("GetStreamsAsync method not found");
             }
 
@@ -747,7 +721,7 @@ namespace Cavea.Api
 
             if (streams == null || streams.Count == 0)
             {
-                _logger.LogWarning("[StreamCache] No streams returned from Gelato provider");
+                _logger.LogWarning("⚪ [StreamCache] No streams returned from Gelato provider");
                 return new List<StreamInfo>();
             }
 

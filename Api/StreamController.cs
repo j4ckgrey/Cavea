@@ -76,7 +76,7 @@ namespace Cavea.Api
                 : mediaSources.FirstOrDefault();
             if (targetSource == null) targetSource = mediaSources.First(); // Fallback
 
-            _logger.LogInformation("[Cavea.Stream] GetMediaStreams: ItemId={ItemId}, MediaSourceId={SourceId}, Client={Client}", itemId, targetSource.Id, client ?? "native");
+            _logger.LogInformation("⚪ [Cavea.Stream] GetMediaStreams: ItemId={ItemId}, MediaSourceId={SourceId}, Client={Client}", itemId, targetSource.Id, client ?? "native");
 
             // 2. Use existing MediaStreams from Jellyfin (no probing)
             var audioStreams = targetSource.MediaStreams
@@ -98,7 +98,7 @@ namespace Cavea.Api
             List<object> embeddedSubs;
             if (isWebClient)
             {
-                _logger.LogInformation("[Cavea.Stream] Web client - skipping embedded subtitles (use external or burn-in)");
+                _logger.LogInformation("⚪ [Cavea.Stream] Web client - skipping embedded subtitles (use external or burn-in)");
                 embeddedSubs = new List<object>();
             }
             else

@@ -80,7 +80,7 @@ namespace Cavea.Api
         [HttpGet]
         public async Task<ActionResult<List<CatalogDto>>> GetCatalogs()
         {
-            _logger.LogInformation("[CatalogController] GET catalogs called");
+            _logger.LogInformation("⚪ [CatalogController] GET catalogs called");
 
             var cfg = Plugin.Instance?.Configuration;
             if (cfg == null)
@@ -115,7 +115,7 @@ namespace Cavea.Api
 
                 if (manifest?.Catalogs == null || manifest.Catalogs.Count == 0)
                 {
-                    _logger.LogInformation("[CatalogController] No catalogs found in manifest");
+                    _logger.LogInformation("⚪ [CatalogController] No catalogs found in manifest");
                     return Ok(new List<CatalogDto>());
                 }
 
@@ -173,28 +173,8 @@ namespace Cavea.Api
 
                 _logger.LogInformation("[CatalogController] Found {Count} catalogs", catalogs.Count);
 
-                // Save catalogs to database
-                foreach (var cat in catalogs)
-                {
-                    try
-                    {
-                        await _dbService.SaveCatalogAsync(
-                            cat.Id,
-                            cat.Name,
-                            cat.Type,
-                            cat.ItemCount,
-                            cat.AddonName,
-                            cat.SourceUrl,
-                            cat.IsSearchCapable,
-                            cat.CollectionName,
-                            cat.ExistingCollectionId
-                        );
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "[CatalogController] Failed to save catalog {Id} to database", cat.Id);
-                    }
-                }
+                // NOTE: DB caching disabled - catalogs work through Jellyfin natively
+                _logger.LogDebug("[CatalogController] Found {Count} catalogs (DB save disabled)", catalogs.Count);
 
                 // Note: Skipping item count fetching as it times out with many catalogs
                 // Counts can be fetched on-demand if needed via the /count endpoint
@@ -719,29 +699,9 @@ namespace Cavea.Api
         /// </summary>
         private async Task SaveCollectionToCavea(MediaBrowser.Controller.Entities.Movies.BoxSet collection, string catalogId)
         {
-            try
-            {
-                var collectionInfo = new Cavea.Services.CollectionInfo
-                {
-                    CollectionId = collection.Id.ToString(),
-                    Name = collection.Name,
-                    Overview = collection.Overview,
-                    Path = collection.Path,
-                    ParentId = collection.ParentId.ToString(),
-                    ItemCount = collection.GetLinkedChildren().Count(),
-                    BackdropUrl = collection.GetImagePath(MediaBrowser.Model.Entities.ImageType.Backdrop, 0),
-                    PosterUrl = collection.GetImagePath(MediaBrowser.Model.Entities.ImageType.Primary, 0),
-                    SourceCatalogId = catalogId,
-                    DateCreated = collection.DateCreated
-                };
-
-                await _dbService.SaveCollectionAsync(collectionInfo).ConfigureAwait(false);
-                _logger.LogInformation("[CatalogController] ✓ Saved collection to Cavea: {Name} ({CollectionId})", collection.Name, collection.Id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[CatalogController] Failed to save collection to Cavea: {CollectionId}", collection.Id);
-            }
+            // NOTE: DB caching disabled - collections not saved to Cavea
+            _logger.LogDebug("[CatalogController] Collection DB save disabled: {Name} ({CollectionId})", collection.Name, collection.Id);
+            await Task.CompletedTask;
         }
 
         /// <summary>
@@ -1116,7 +1076,7 @@ namespace Cavea.Api
                             if (args.Count == parameters.Length)
                             {
                                 transientManager = ctor.Invoke(args.ToArray());
-                                _logger.LogDebug("[CatalogController] Frankenstein Transient GelatoManager created successfully.");
+                                _logger.LogDebug("⚪ [CatalogController] Frankenstein Transient GelatoManager created successfully.");
                             }
                         }
                     }
@@ -1209,7 +1169,7 @@ namespace Cavea.Api
                 
                 if (gelatoAssembly == null)
                 {
-                    _logger.LogError("Gelato assembly not found");
+                    _logger.LogError("⚪ Gelato assembly not found");
                     return null;
                 }
 
@@ -1241,7 +1201,7 @@ namespace Cavea.Api
 
                 if (manager == null)
                 {
-                    _logger.LogError("GelatoManager service not found in DI or Plugin Instance.");
+                    _logger.LogError("⚪ GelatoManager service not found in DI or Plugin Instance.");
                     return null;
                 }
 
@@ -1262,7 +1222,7 @@ namespace Cavea.Api
                 
                 if (getMetaMethod == null)
                 {
-                    _logger.LogError("GetMetaAsync method not found in GelatoStremioProvider");
+                    _logger.LogError("⚪ GetMetaAsync method not found in GelatoStremioProvider");
                     return null;
                 }
 
@@ -1353,13 +1313,13 @@ namespace Cavea.Api
                 // Validate cached references
                 if (gelatoManager == null || managerType == null || metaTypeEnum == null)
                 {
-                    _logger.LogError("[CatalogController] Gelato references not available - Gelato plugin may not be installed");
+                    _logger.LogError("⚪ [CatalogController] Gelato references not available - Gelato plugin may not be installed");
                     return null;
                 }
                 
                 if (string.IsNullOrEmpty(gelatoFolderPath))
                 {
-                    _logger.LogError("[CatalogController] Gelato folder path not configured - check Gelato library settings");
+                    _logger.LogError("⚪ [CatalogController] Gelato folder path not configured - check Gelato library settings");
                     return null;
                 }
 
@@ -1368,7 +1328,7 @@ namespace Cavea.Api
                 var stremioMetaType = gelatoAssembly.GetType("Gelato.StremioMeta");
                 if (stremioMetaType == null)
                 {
-                    _logger.LogError("[CatalogController] StremioMeta type not found in Gelato assembly");
+                    _logger.LogError("⚪ [CatalogController] StremioMeta type not found in Gelato assembly");
                     return null;
                 }
                 
@@ -1409,7 +1369,7 @@ namespace Cavea.Api
                 var insertMetaMethod = managerType.GetMethod("InsertMeta");
                 if (insertMetaMethod == null)
                 {
-                    _logger.LogError("[CatalogController] InsertMeta method not found in GelatoManager");
+                    _logger.LogError("⚪ [CatalogController] InsertMeta method not found in GelatoManager");
                     return null;
                 }
                 
@@ -1554,7 +1514,7 @@ namespace Cavea.Api
                 
                 if (urlElement == null || string.IsNullOrEmpty(urlElement.Value))
                 {
-                    _logger.LogWarning("[CatalogController] Gelato config has no URL configured");
+                    _logger.LogWarning("⚪ [CatalogController] Gelato config has no URL configured");
                     return null;
                 }
 
@@ -1773,10 +1733,7 @@ namespace Cavea.Api
                         ImportedAt = DateTime.UtcNow
                     };
 
-                    if (await _dbService.SaveCatalogItemAsync(catalogItem))
-                    {
-                        savedCount++;
-                    }
+                    savedCount++; // Count as processed but don't save
                 }
                 catch (Exception ex)
                 {
@@ -1855,9 +1812,7 @@ namespace Cavea.Api
                         FileIdx = s.FileIdx
                     }).ToList();
                     
-                    // Save to Cavea database
-                    await _dbService.SaveStreamsAsync(itemId, null, imdbId, null, mediaType, null, streamInfoList).ConfigureAwait(false);
-                    _logger.LogInformation("[CatalogController] ✓ Cached {Count} streams for ItemId={ItemId}, ImdbId={ImdbId}", 
+                    _logger.LogInformation("[CatalogController] ✓ Processed {Count} streams for ItemId={ItemId}, ImdbId={ImdbId} (DB disabled)", 
                         streamInfoList.Count, itemId, imdbId);
                 }
                 catch (Exception ex)

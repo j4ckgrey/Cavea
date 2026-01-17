@@ -49,24 +49,24 @@ namespace Cavea.Api
             [FromRoute] string itemId,
             [FromQuery] bool forceRefresh = false)
         {
-            _logger.LogInformation("[ReviewsController] 🔵 GetReviewsForItem called: itemId={ItemId}, forceRefresh={ForceRefresh}", itemId, forceRefresh);
+            _logger.LogInformation("[ReviewsController]  GetReviewsForItem called: itemId={ItemId}, forceRefresh={ForceRefresh}", itemId, forceRefresh);
             
             try
             {
                 if (!Guid.TryParse(itemId, out var itemGuid))
                 {
-                    _logger.LogWarning("[ReviewsController] 🔴 Invalid item ID format: {ItemId}", itemId);
+                    _logger.LogWarning("[ReviewsController]  Invalid item ID format: {ItemId}", itemId);
                     return BadRequest(new { error = "Invalid item ID format" });
                 }
                 
                 var item = _libraryManager.GetItemById(itemGuid);
                 if (item == null)
                 {
-                    _logger.LogWarning("[ReviewsController] 🔴 Item not found: {ItemId}", itemId);
+                    _logger.LogWarning("[ReviewsController]  Item not found: {ItemId}", itemId);
                     return NotFound(new { error = "Item not found" });
                 }
 
-                _logger.LogInformation("[ReviewsController] 🔵 Found item: {ItemName} ({ItemType})", item.Name, item.GetType().Name);
+                _logger.LogInformation("[ReviewsController]  Found item: {ItemName} ({ItemType})", item.Name, item.GetType().Name);
 
                 // Determine item type
                 string itemType;
@@ -84,7 +84,7 @@ namespace Cavea.Api
                 }
                 else
                 {
-                    _logger.LogWarning("[ReviewsController] 🔴 Unsupported item type: {Type}", item.GetType().Name);
+                    _logger.LogWarning("[ReviewsController]  Unsupported item type: {Type}", item.GetType().Name);
                     return BadRequest(new { error = "Unsupported item type" });
                 }
 
@@ -92,22 +92,22 @@ namespace Cavea.Api
                 var imdbId = item.ProviderIds?.GetValueOrDefault("Imdb");
                 var tmdbId = item.ProviderIds?.GetValueOrDefault("Tmdb");
 
-                _logger.LogInformation("[ReviewsController] 🔵 Provider IDs: IMDB={ImdbId}, TMDB={TmdbId}", imdbId ?? "null", tmdbId ?? "null");
+                _logger.LogInformation("⚪ [ReviewsController]  Provider IDs: IMDB={ImdbId}, TMDB={TmdbId}", imdbId ?? "null", tmdbId ?? "null");
 
                 if (string.IsNullOrEmpty(imdbId) && string.IsNullOrEmpty(tmdbId))
                 {
-                    _logger.LogWarning("[ReviewsController] 🔴 No IMDB or TMDB ID found for item {ItemId}", itemId);
+                    _logger.LogWarning("[ReviewsController]  No IMDB or TMDB ID found for item {ItemId}", itemId);
                     return NotFound(new { error = "No IMDB or TMDB ID found for this item" });
                 }
 
-                // Save item metadata to our database
-                await _dbService.SaveItemMetadataAsync(itemId, imdbId, tmdbId, itemType, item.Name);
+                // NO DB SAVING for item metadata
+                _logger.LogDebug("[ReviewsController] Skipping metadata save for {ItemId}", itemId);
 
                 // Get configured review source
                 var cfg = Plugin.Instance?.Configuration;
                 var reviewSource = cfg?.ReviewSource ?? "tmdb";
                 
-                _logger.LogInformation("[ReviewsController] 🔵 Using review source: {Source}. TMDB Key: {Tmdb}, RapidAPI Key: {Rapid}", 
+                _logger.LogInformation("[ReviewsController]  Using review source: {Source}. TMDB Key: {Tmdb}, RapidAPI Key: {Rapid}", 
                     reviewSource, 
                     !string.IsNullOrEmpty(cfg?.TmdbApiKey) ? "Set" : "Missing",
                     !string.IsNullOrEmpty(cfg?.RapidApiKey) ? "Set" : "Missing");
@@ -118,10 +118,10 @@ namespace Cavea.Api
                     var cachedReviews = await _dbService.GetReviewsAsync(itemId, reviewSource);
                     if (cachedReviews != null)
                     {
-                        _logger.LogInformation("[ReviewsController] 🟢 Returning cached reviews for {ItemId}", itemId);
+                        _logger.LogInformation("[ReviewsController]  Returning cached reviews for {ItemId}", itemId);
                         return Content(cachedReviews, "application/json");
                     }
-                    _logger.LogInformation("[ReviewsController] 🔵 No cached reviews found, fetching fresh...");
+                    _logger.LogInformation("⚪ [ReviewsController]  No cached reviews found, fetching fresh...");
                 }
 
                 // Fetch fresh reviews based on source
@@ -130,23 +130,23 @@ namespace Cavea.Api
 
                 if (reviewSource == "tmdb")
                 {
-                    _logger.LogInformation("[ReviewsController] 🔵 Fetching TMDB reviews for {MediaType}/{TmdbId}...", mediaType, tmdbId);
+                    _logger.LogInformation("[ReviewsController]  Fetching TMDB reviews for {MediaType}/{TmdbId}...", mediaType, tmdbId);
                     reviewsDoc = await FetchTMDBReviews(imdbId, tmdbId, mediaType);
                 }
                 else if (reviewSource == "trakt" && !string.IsNullOrEmpty(imdbId))
                 {
-                    _logger.LogInformation("[ReviewsController] 🔵 Fetching Trakt reviews for {ImdbId}...", imdbId);
+                    _logger.LogInformation("[ReviewsController]  Fetching Trakt reviews for {ImdbId}...", imdbId);
                     reviewsDoc = await FetchTraktReviews(imdbId, mediaType, cfg?.TraktClientId);
                 }
                 else if (reviewSource == "imdb" && !string.IsNullOrEmpty(imdbId))
                 {
-                    _logger.LogInformation("[ReviewsController] 🔵 Fetching IMDb reviews for {ImdbId}...", imdbId);
+                    _logger.LogInformation("[ReviewsController]  Fetching IMDb reviews for {ImdbId}...", imdbId);
                     reviewsDoc = await FetchIMDbReviews(imdbId, cfg?.RapidApiKey);
                 }
 
                 if (reviewsDoc == null)
                 {
-                    _logger.LogWarning("[ReviewsController] 🔴 No reviews returned from {Source}", reviewSource);
+                    _logger.LogWarning("[ReviewsController]  No reviews returned from {Source}", reviewSource);
                     return Ok(new { results = new List<object>() });
                 }
 
@@ -154,12 +154,12 @@ namespace Cavea.Api
                 var reviewsJson = reviewsDoc.RootElement.GetRawText();
                 await _dbService.SaveReviewsAsync(itemId, imdbId, tmdbId, itemType, reviewSource, reviewsJson);
 
-                _logger.LogInformation("[ReviewsController] 🟢 Successfully fetched and cached reviews for {ItemId}", itemId);
+                _logger.LogInformation("[ReviewsController]  Successfully fetched and cached reviews for {ItemId}", itemId);
                 return Content(reviewsJson, "application/json");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[ReviewsController] 🔴 Error fetching reviews for item {ItemId}", itemId);
+                _logger.LogError(ex, "[ReviewsController]  Error fetching reviews for item {ItemId}", itemId);
                 return StatusCode(500, new { error = "Failed to fetch reviews" });
             }
         }
@@ -243,13 +243,13 @@ namespace Cavea.Api
                 
                 if (string.IsNullOrEmpty(apiKey))
                 {
-                    _logger.LogWarning("[ReviewsController] TMDB API key not configured");
+                    _logger.LogWarning("⚪ [ReviewsController] TMDB API key not configured");
                     return null;
                 }
 
                 if (string.IsNullOrEmpty(tmdbId))
                 {
-                    _logger.LogWarning("[ReviewsController] No TMDB ID provided");
+                    _logger.LogWarning("⚪ [ReviewsController] No TMDB ID provided");
                     return null;
                 }
 
@@ -289,7 +289,7 @@ namespace Cavea.Api
         {
             if (string.IsNullOrEmpty(clientId))
             {
-                _logger.LogWarning("[ReviewsController] Trakt Client ID not configured");
+                _logger.LogWarning("⚪ [ReviewsController] Trakt Client ID not configured");
                 return null;
             }
             
@@ -342,14 +342,14 @@ namespace Cavea.Api
         {
             if (string.IsNullOrEmpty(rapidApiKey))
             {
-                _logger.LogWarning("[ReviewsController] RapidAPI Key not configured");
+                _logger.LogWarning("⚪ [ReviewsController] RapidAPI Key not configured");
                 return null;
             }
             
             try
             {
-                // IMDb8 API endpoint (ApiDojo)
-                var url = $"https://imdb8.p.rapidapi.com/title/get-user-reviews?tconst={imdbId}";
+                // IMDb8 API v2 endpoint - uses featuredReviews
+                var url = $"https://imdb8.p.rapidapi.com/title/v2/get-user-reviews-summary?tconst={imdbId}&country=US&language=en-US";
                 
                 using var client = new HttpClient();
                 client.DefaultRequestHeaders.Add("x-rapidapi-key", rapidApiKey);
@@ -359,66 +359,83 @@ namespace Cavea.Api
                 using var reviewsDoc = JsonDocument.Parse(response);
                 var root = reviewsDoc.RootElement;
                 
-                // Transform IMDb8 response to TMDB-like format
+                // Transform IMDb8 v2 response to TMDB-like format
                 var reviews = new List<object>();
                 
-                // IMDb8 returns an object with a "reviews" array
-                if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("reviews", out var reviewsArray) && reviewsArray.ValueKind == JsonValueKind.Array)
+                // Navigate to data.title.featuredReviews.edges
+                if (root.TryGetProperty("data", out var data) &&
+                    data.TryGetProperty("title", out var title) &&
+                    title.TryGetProperty("featuredReviews", out var featuredReviews) &&
+                    featuredReviews.TryGetProperty("edges", out var edges) &&
+                    edges.ValueKind == JsonValueKind.Array)
                 {
                     var count = 0;
-                    foreach (var review in reviewsArray.EnumerateArray())
+                    foreach (var edge in edges.EnumerateArray())
                     {
                         if (count >= REVIEWS_LIMIT) break;
                         
+                        if (!edge.TryGetProperty("node", out var node))
+                            continue;
+                        
                         // Extract author
                         var author = "Anonymous";
+                        if (node.TryGetProperty("author", out var authorObj) &&
+                            authorObj.TryGetProperty("nickName", out var nickName))
+                        {
+                            author = nickName.GetString() ?? "Anonymous";
+                        }
+                        
+                        // Extract author rating
                         double? authorRating = null;
-
-                        if (review.TryGetProperty("author", out var authorObj) && authorObj.ValueKind == JsonValueKind.Object)
+                        if (node.TryGetProperty("authorRating", out var ratingProp) &&
+                            ratingProp.ValueKind == JsonValueKind.Number)
                         {
-                            if (authorObj.TryGetProperty("displayName", out var nameProp))
-                            {
-                                author = nameProp.GetString() ?? "Anonymous";
-                            }
-                            
-                            if (authorObj.TryGetProperty("authorRating", out var ratingProp) && ratingProp.ValueKind == JsonValueKind.Number)
-                            {
-                                authorRating = ratingProp.GetDouble();
-                            }
+                            authorRating = ratingProp.GetDouble();
                         }
                         
-                        // Extract content
+                        // Extract review title (summary.originalText)
+                        var reviewTitle = "";
+                        if (node.TryGetProperty("summary", out var summary) &&
+                            summary.TryGetProperty("originalText", out var summaryText))
+                        {
+                            reviewTitle = summaryText.GetString() ?? "";
+                        }
+                        
+                        // Extract review content (text.originalText.plainText)
                         var content = "";
-                        if (review.TryGetProperty("reviewText", out var textProp))
+                        if (node.TryGetProperty("text", out var textObj) &&
+                            textObj.TryGetProperty("originalText", out var originalText) &&
+                            originalText.TryGetProperty("plainText", out var plainText))
                         {
-                            content = textProp.GetString() ?? "";
+                            content = plainText.GetString() ?? "";
                         }
                         
-                        // Extract title (optional)
-                        var title = "";
-                        if (review.TryGetProperty("reviewTitle", out var titleProp))
+                        // Prepend title to content if exists
+                        if (!string.IsNullOrEmpty(reviewTitle))
                         {
-                            title = titleProp.GetString() ?? "";
-                        }
-
-                        // Prepend title to content if it exists
-                        if (!string.IsNullOrEmpty(title))
-                        {
-                            content = $"**{title}**\n\n{content}";
+                            content = $"**{reviewTitle}**\n\n{content}";
                         }
                         
-                        // Extract date
+                        // Extract submission date
                         var createdAt = DateTime.UtcNow.ToString("O");
-                        if (review.TryGetProperty("submissionDate", out var dateProp)) 
+                        if (node.TryGetProperty("submissionDate", out var dateProp))
                         {
                             createdAt = dateProp.GetString() ?? DateTime.UtcNow.ToString("O");
                         }
-
-                        // Extract ID
+                        
+                        // Extract review ID
                         var id = Guid.NewGuid().ToString();
-                        if (review.TryGetProperty("id", out var idProp))
+                        if (node.TryGetProperty("id", out var idProp))
                         {
                             id = idProp.GetString() ?? Guid.NewGuid().ToString();
+                        }
+                        
+                        // Check for spoiler flag
+                        var isSpoiler = false;
+                        if (node.TryGetProperty("spoiler", out var spoilerProp) &&
+                            spoilerProp.ValueKind == JsonValueKind.True)
+                        {
+                            isSpoiler = true;
                         }
                         
                         reviews.Add(new
@@ -429,11 +446,14 @@ namespace Cavea.Api
                             created_at = createdAt,
                             id = id,
                             rating = authorRating,
-                            url = $"https://www.imdb.com/title/{imdbId}/reviews"
+                            url = $"https://www.imdb.com/title/{imdbId}/reviews",
+                            spoiler = isSpoiler
                         });
                         count++;
                     }
                 }
+                
+                _logger.LogInformation("[ReviewsController] Fetched {Count} IMDb reviews for {ImdbId} (v2 API)", reviews.Count, imdbId);
                 
                 var reviewsJson = JsonSerializer.Serialize(new { results = reviews });
                 return JsonDocument.Parse(reviewsJson);

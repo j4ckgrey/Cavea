@@ -70,7 +70,7 @@ namespace Cavea.Tasks
 
         public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("[Cavea] CatalogSyncTask starting...");
+            _logger.LogInformation("⚪ [Cavea] CatalogSyncTask starting...");
             
             // CRITICAL: Clear HttpContext to avoid ObjectDisposedException
             if (_httpContextAccessor != null) _httpContextAccessor.HttpContext = null;
@@ -86,7 +86,7 @@ namespace Cavea.Tasks
 
             if (collections.Count == 0)
             {
-                _logger.LogInformation("[Cavea] No Stremio collections found to sync.");
+                _logger.LogInformation("⚪ [Cavea] No Stremio collections found to sync.");
                 progress.Report(100);
                 return;
             }
@@ -101,7 +101,7 @@ namespace Cavea.Tasks
             var aiostreamsUrl = GetGelatoAiostreamsBaseUrl();
             if (string.IsNullOrEmpty(aiostreamsUrl))
             {
-                _logger.LogWarning("[Cavea] Cannot sync - Gelato aiostreams URL not configured.");
+                _logger.LogWarning("⚪ [Cavea] Cannot sync - Gelato aiostreams URL not configured.");
                 progress.Report(100);
                 return;
             }
@@ -151,7 +151,7 @@ namespace Cavea.Tasks
                 progress.Report((done / (double)collections.Count) * 100);
             }
 
-            _logger.LogInformation("[Cavea] CatalogSyncTask completed.");
+            _logger.LogInformation("⚪ [Cavea] CatalogSyncTask completed.");
         }
 
         private async Task SyncCatalogDirectly(BoxSet collection, string catalogId, string type, string aiostreamsUrl, int maxItems, string? forcedType, CancellationToken ct)
@@ -436,7 +436,7 @@ namespace Cavea.Tasks
                 {
                     _logger.LogInformation("[Cavea] Adding {Count} items to collection '{Name}' in one batch...", importedIds.Count, collection.Name);
                     await collectionManager.AddToCollectionAsync(collection.Id, importedIds.Distinct().ToArray()).ConfigureAwait(false);
-                    _logger.LogInformation("[Cavea] Batch add successful.");
+                    _logger.LogInformation("⚪ [Cavea] Batch add successful.");
                 }
                 catch (Exception ex)
                 {
@@ -457,7 +457,7 @@ namespace Cavea.Tasks
                 
                 if (gelatoAssembly == null)
                 {
-                    _logger.LogError("[Cavea] Gelato assembly not found");
+                    _logger.LogError("⚪ [Cavea] Gelato assembly not found");
                     return null;
                 }
 
@@ -467,7 +467,7 @@ namespace Cavea.Tasks
                 
                 if (managerType == null || pluginType == null || metaTypeEnum == null)
                 {
-                    _logger.LogError("[Cavea] Required Gelato types not found");
+                    _logger.LogError("⚪ [Cavea] Required Gelato types not found");
                     return null;
                 }
                 
@@ -476,7 +476,7 @@ namespace Cavea.Tasks
                 var singletonManager = scope.ServiceProvider.GetService(managerType);
                 if (singletonManager == null)
                 {
-                    _logger.LogError("[Cavea] GelatoManager service not found");
+                    _logger.LogError("⚪ [Cavea] GelatoManager service not found");
                     return null;
                 }
 
@@ -571,7 +571,7 @@ namespace Cavea.Tasks
                         if (args.Count == parameters.Length)
                         {
                             transientManager = ctor.Invoke(args.ToArray());
-                            _logger.LogDebug("[Cavea] Frankenstein Transient GelatoManager created for SyncTask.");
+                            _logger.LogDebug("⚪ [Cavea] Frankenstein Transient GelatoManager created for SyncTask.");
                         }
                     }
                 }
@@ -721,7 +721,7 @@ namespace Cavea.Tasks
 
                 if (urlElement == null || string.IsNullOrEmpty(urlElement.Value))
                 {
-                    _logger.LogWarning("[Cavea] Gelato config has no URL configured");
+                    _logger.LogWarning("⚪ [Cavea] Gelato config has no URL configured");
                     return null;
                 }
 

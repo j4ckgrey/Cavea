@@ -54,11 +54,11 @@ namespace Cavea.Tasks
             var cfg = Plugin.Instance?.Configuration;
             if (cfg == null || !cfg.UseCaveaStaging)
             {
-                _logger.LogDebug("[CaveaSyncTask] Staging disabled, skipping sync");
+                _logger.LogDebug("⚪ [CaveaSyncTask] Staging disabled, skipping sync");
                 return;
             }
 
-            _logger.LogInformation("[CaveaSyncTask] Starting sync of staged items");
+            _logger.LogInformation("⚪ [CaveaSyncTask] Starting sync of staged items");
             progress.Report(0);
 
             try
@@ -68,7 +68,7 @@ namespace Cavea.Tasks
                 
                 if (pendingItems.Count == 0)
                 {
-                    _logger.LogInformation("[CaveaSyncTask] No pending items to sync");
+                    _logger.LogInformation("⚪ [CaveaSyncTask] No pending items to sync");
                     progress.Report(100);
                     return;
                 }
@@ -160,14 +160,14 @@ namespace Cavea.Tasks
                     
                 if (gelatoAssembly == null)
                 {
-                    _logger.LogWarning("[CaveaSyncTask] Gelato assembly not found");
+                    _logger.LogWarning("⚪ [CaveaSyncTask] Gelato assembly not found");
                     return null;
                 }
 
                 var gelatoPluginType = gelatoAssembly.GetType("Gelato.GelatoPlugin");
                 if (gelatoPluginType == null)
                 {
-                    _logger.LogWarning("[CaveaSyncTask] GelatoPlugin type not found");
+                    _logger.LogWarning("⚪ [CaveaSyncTask] GelatoPlugin type not found");
                     return null;
                 }
 
@@ -175,14 +175,14 @@ namespace Cavea.Tasks
                 var gelatoPlugin = instanceProp?.GetValue(null);
                 if (gelatoPlugin == null)
                 {
-                    _logger.LogWarning("[CaveaSyncTask] Gelato plugin not available");
+                    _logger.LogWarning("⚪ [CaveaSyncTask] Gelato plugin not available");
                     return null;
                 }
 
                 var gelatoManager = gelatoPlugin.GetType().GetProperty("Manager")?.GetValue(gelatoPlugin);
                 if (gelatoManager == null)
                 {
-                    _logger.LogWarning("[CaveaSyncTask] Gelato manager not available");
+                    _logger.LogWarning("⚪ [CaveaSyncTask] Gelato manager not available");
                     return null;
                 }
 
@@ -190,7 +190,7 @@ namespace Cavea.Tasks
                 var metaTypeEnum = managerType.Assembly.GetType("Gelato.StremioMediaType");
                 if (metaTypeEnum == null)
                 {
-                    _logger.LogWarning("[CaveaSyncTask] StremioMediaType not found");
+                    _logger.LogWarning("⚪ [CaveaSyncTask] StremioMediaType not found");
                     return null;
                 }
 
@@ -199,7 +199,7 @@ namespace Cavea.Tasks
                 var cfg = cfgProp?.GetValue(gelatoPlugin);
                 if (cfg == null)
                 {
-                    _logger.LogWarning("[CaveaSyncTask] Gelato configuration not available");
+                    _logger.LogWarning("⚪ [CaveaSyncTask] Gelato configuration not available");
                     return null;
                 }
                 
@@ -209,7 +209,7 @@ namespace Cavea.Tasks
 
                 if (string.IsNullOrEmpty(folderPath))
                 {
-                    _logger.LogWarning("[CaveaSyncTask] Folder path not configured");
+                    _logger.LogWarning("⚪ [CaveaSyncTask] Folder path not configured");
                     return null;
                 }
 
@@ -253,7 +253,7 @@ namespace Cavea.Tasks
                 var insertMetaMethod = managerType.GetMethod("InsertMeta");
                 if (insertMetaMethod == null)
                 {
-                    _logger.LogWarning("[CaveaSyncTask] InsertMeta method not found");
+                    _logger.LogWarning("⚪ [CaveaSyncTask] InsertMeta method not found");
                     return null;
                 }
 
