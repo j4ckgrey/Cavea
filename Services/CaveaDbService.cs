@@ -308,11 +308,11 @@ namespace Cavea.Services
 
 
                 createTableCmd.ExecuteNonQuery();
-                _logger.LogInformation("⚪  [CaveaDb] Database initialized at {Path}", _dbPath);
+                _logger.LogInformation("⚪ [CaveaDb] Database initialized at {Path}", _dbPath);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to initialize database, will retry on first use");
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to initialize database, will retry on first use");
                 // Don't throw - let the plugin load and retry on first database operation
                 try { _connection?.Close(); } catch { }
                 _connection = null;
@@ -332,7 +332,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to open database connection");
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to open database connection");
                 throw;
             }
         }
@@ -367,12 +367,12 @@ namespace Cavea.Services
                 cmd.Parameters.AddWithValue("@cachedAt", DateTime.UtcNow.ToString("o"));
 
                 await cmd.ExecuteNonQueryAsync();
-                _logger.LogInformation("⚪  [CaveaDb] Saved reviews for {ItemId} from {Source}", itemId, source);
+                _logger.LogInformation("⚪ [CaveaDb] Saved reviews for {ItemId} from {Source}", itemId, source);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save reviews for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to save reviews for {ItemId}", itemId);
                 return false;
             }
         }
@@ -403,12 +403,12 @@ namespace Cavea.Services
                     // Cache valid for 24 hours
                     if (DateTime.UtcNow - cachedAt < TimeSpan.FromHours(24))
                     {
-                        _logger.LogInformation("⚪  [CaveaDb] Found cached reviews for {ItemId} from {Source}", itemId, source);
+                        _logger.LogInformation("⚪ [CaveaDb] Found cached reviews for {ItemId} from {Source}", itemId, source);
                         return reader.GetString(0);
                     }
                     else
                     {
-                        _logger.LogInformation("⚪  [CaveaDb] Cached reviews expired for {ItemId}", itemId);
+                        _logger.LogInformation("⚪ [CaveaDb] Cached reviews expired for {ItemId}", itemId);
                     }
                 }
 
@@ -416,7 +416,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get reviews for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to get reviews for {ItemId}", itemId);
                 return null;
             }
         }
@@ -454,7 +454,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save metadata for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to save metadata for {ItemId}", itemId);
                 return false;
             }
         }
@@ -491,7 +491,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get items needing updates");
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to get items needing updates");
             }
             return items;
         }
@@ -539,7 +539,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save catalog {CatalogId}", catalogId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to save catalog {CatalogId}", catalogId);
                 return false;
             }
         }
@@ -575,7 +575,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get catalogs");
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to get catalogs");
             }
             return catalogs;
         }
@@ -741,7 +741,7 @@ namespace Cavea.Services
                     }
 
                     transaction.Commit();
-                    _logger.LogDebug("⚪  [CaveaDb] Saved complete metadata for {ItemId} ({Name})", metadata.ItemId, metadata.Name);
+                    _logger.LogDebug("⚪ [CaveaDb] Saved complete metadata for {ItemId} ({Name})", metadata.ItemId, metadata.Name);
                     return true;
                 }
                 catch
@@ -752,8 +752,141 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save complete metadata for {ItemId}", metadata.ItemId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to save complete metadata for {ItemId}", metadata.ItemId);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Get complete item metadata from Cavea database
+        /// </summary>
+        public async Task<CompleteItemMetadata?> GetCompleteItemMetadataAsync(string itemId)
+        {
+            try
+            {
+                EnsureConnection();
+
+                CompleteItemMetadata? metadata = null;
+
+                // 1. Get main metadata
+                using (var cmd = _connection!.CreateCommand())
+                {
+                    cmd.CommandText = @"
+                        SELECT 
+                            ItemId, ImdbId, TmdbId, TvdbId, ItemType, Name, OriginalTitle, Overview, Tagline,
+                            Year, PremiereDate, EndDate, Status, OfficialRating, CommunityRating, CriticRating,
+                            Runtime, Genres, Studios, Tags, BackdropUrl, PosterUrl, LogoUrl,
+                            ParentId, CollectionId, CollectionName, SeasonNumber, EpisodeNumber,
+                            SeriesId, SeriesName, Path, FileName, Container, VideoCodec, AudioCodec,
+                            Width, Height, AspectRatio, Framerate, Bitrate, FileSize,
+                            DateCreated, DateModified, LastUpdated
+                        FROM ItemMetadata
+                        WHERE ItemId = @itemId
+                    ";
+                    cmd.Parameters.AddWithValue("@itemId", itemId);
+
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    if (await reader.ReadAsync())
+                    {
+                        metadata = new CompleteItemMetadata
+                        {
+                            ItemId = reader.GetString(0),
+                            ImdbId = reader.IsDBNull(1) ? null : reader.GetString(1),
+                            TmdbId = reader.IsDBNull(2) ? null : reader.GetString(2),
+                            TvdbId = reader.IsDBNull(3) ? null : reader.GetString(3),
+                            ItemType = reader.GetString(4),
+                            Name = reader.IsDBNull(5) ? null : reader.GetString(5),
+                            OriginalTitle = reader.IsDBNull(6) ? null : reader.GetString(6),
+                            Overview = reader.IsDBNull(7) ? null : reader.GetString(7),
+                            Tagline = reader.IsDBNull(8) ? null : reader.GetString(8),
+                            Year = reader.IsDBNull(9) ? null : reader.GetInt32(9),
+                            PremiereDate = reader.IsDBNull(10) ? null : DateTime.Parse(reader.GetString(10)),
+                            EndDate = reader.IsDBNull(11) ? null : DateTime.Parse(reader.GetString(11)),
+                            Status = reader.IsDBNull(12) ? null : reader.GetString(12),
+                            OfficialRating = reader.IsDBNull(13) ? null : reader.GetString(13),
+                            CommunityRating = reader.IsDBNull(14) ? null : reader.GetFloat(14),
+                            CriticRating = reader.IsDBNull(15) ? null : reader.GetFloat(15),
+                            Runtime = reader.IsDBNull(16) ? null : reader.GetInt64(16),
+                            Genres = reader.IsDBNull(17) ? new List<string>() : reader.GetString(17).Split('|').ToList(),
+                            Studios = reader.IsDBNull(18) ? new List<string>() : reader.GetString(18).Split('|').ToList(),
+                            Tags = reader.IsDBNull(19) ? new List<string>() : reader.GetString(19).Split('|').ToList(),
+                            BackdropUrl = reader.IsDBNull(20) ? null : reader.GetString(20),
+                            PosterUrl = reader.IsDBNull(21) ? null : reader.GetString(21),
+                            LogoUrl = reader.IsDBNull(22) ? null : reader.GetString(22),
+                            ParentId = reader.IsDBNull(23) ? null : reader.GetString(23),
+                            CollectionId = reader.IsDBNull(24) ? null : reader.GetString(24),
+                            CollectionName = reader.IsDBNull(25) ? null : reader.GetString(25),
+                            SeasonNumber = reader.IsDBNull(26) ? null : reader.GetInt32(26),
+                            EpisodeNumber = reader.IsDBNull(27) ? null : reader.GetInt32(27),
+                            SeriesId = reader.IsDBNull(28) ? null : reader.GetString(28),
+                            SeriesName = reader.IsDBNull(29) ? null : reader.GetString(29),
+                            Path = reader.IsDBNull(30) ? null : reader.GetString(30),
+                            FileName = reader.IsDBNull(31) ? null : reader.GetString(31),
+                            Container = reader.IsDBNull(32) ? null : reader.GetString(32),
+                            VideoCodec = reader.IsDBNull(33) ? null : reader.GetString(33),
+                            AudioCodec = reader.IsDBNull(34) ? null : reader.GetString(34),
+                            Width = reader.IsDBNull(35) ? null : reader.GetInt32(35),
+                            Height = reader.IsDBNull(36) ? null : reader.GetInt32(36),
+                            AspectRatio = reader.IsDBNull(37) ? null : reader.GetString(37),
+                            Framerate = reader.IsDBNull(38) ? null : reader.GetFloat(38),
+                            Bitrate = reader.IsDBNull(39) ? null : reader.GetInt32(39),
+                            FileSize = reader.IsDBNull(40) ? null : reader.GetInt64(40),
+                            DateCreated = reader.IsDBNull(41) ? null : DateTime.Parse(reader.GetString(41)),
+                            DateModified = reader.IsDBNull(42) ? null : DateTime.Parse(reader.GetString(42))
+                        };
+                    }
+                }
+
+                if (metadata != null)
+                {
+                    // 2. Get provider IDs
+                    metadata.ProviderIds = new Dictionary<string, string>();
+                    using (var cmd = _connection.CreateCommand())
+                    {
+                        cmd.CommandText = "SELECT ProviderName, ProviderId FROM ProviderIds WHERE ItemId = @itemId";
+                        cmd.Parameters.AddWithValue("@itemId", itemId);
+                        using var reader = await cmd.ExecuteReaderAsync();
+                        while (await reader.ReadAsync())
+                        {
+                            metadata.ProviderIds[reader.GetString(0)] = reader.GetString(1);
+                        }
+                    }
+
+                    // 3. Get people
+                    metadata.People = new List<PersonInfo>();
+                    using (var cmd = _connection.CreateCommand())
+                    {
+                        cmd.CommandText = @"
+                            SELECT PersonName, Role, Type, ImageUrl, SortOrder 
+                            FROM People 
+                            WHERE ItemId = @itemId 
+                            ORDER BY SortOrder
+                        ";
+                        cmd.Parameters.AddWithValue("@itemId", itemId);
+                        using var reader = await cmd.ExecuteReaderAsync();
+                        while (await reader.ReadAsync())
+                        {
+                            metadata.People.Add(new PersonInfo
+                            {
+                                Name = reader.GetString(0),
+                                Role = reader.IsDBNull(1) ? null : reader.GetString(1),
+                                Type = reader.GetString(2),
+                                ImageUrl = reader.IsDBNull(3) ? null : reader.GetString(3),
+                                SortOrder = reader.GetInt32(4)
+                            });
+                        }
+                    }
+                    
+                    _logger.LogDebug("⚪ [CaveaDb] Retrieved complete metadata for {ItemId}", itemId);
+                    return metadata;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to get complete metadata for {ItemId}", itemId);
+                return null;
             }
         }
 
@@ -798,7 +931,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save collection {CollectionId}", collection.CollectionId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to save collection {CollectionId}", collection.CollectionId);
                 return false;
             }
         }
@@ -831,7 +964,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to cache TMDB episode {Sid} S{Sn}E{En}", tmdbSeriesId, season, episode);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to cache TMDB episode {Sid} S{Sn}E{En}", tmdbSeriesId, season, episode);
                 return false;
             }
         }
@@ -867,7 +1000,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get cached TMDB episode {Sid} S{Sn}E{En}", tmdbSeriesId, season, episode);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to get cached TMDB episode {Sid} S{Sn}E{En}", tmdbSeriesId, season, episode);
                 return null;
             }
         }
@@ -950,12 +1083,12 @@ namespace Cavea.Services
                     await cmd.ExecuteNonQueryAsync();
                 }
 
-                _logger.LogInformation("⚪  [CaveaDb] Saved {Count} streams for {ItemId}", streams.Count, itemId);
+                _logger.LogInformation("⚪ [CaveaDb] Saved {Count} streams for {ItemId}", streams.Count, itemId);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save streams for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to save streams for {ItemId}", itemId);
                 return false;
             }
         }
@@ -1034,7 +1167,7 @@ namespace Cavea.Services
                         }
 
 
-                    _logger.LogInformation("⚪  [CaveaDb] Found {Count} cached streams for {ItemId} with probed data and subtitles", streams.Count, itemId);
+                    _logger.LogInformation("⚪ [CaveaDb] Found {Count} cached streams for {ItemId} with probed data and subtitles", streams.Count, itemId);
                     return streams;
                 }
 
@@ -1042,7 +1175,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get streams for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to get streams for {ItemId}", itemId);
                 return null;
             }
         }
@@ -1059,7 +1192,7 @@ namespace Cavea.Services
                 // No cache, all fresh streams are new
                 result.NewStreams = freshStreams;
                 result.HasNewStreams = freshStreams.Count > 0;
-                _logger.LogDebug("⚪  [CaveaDb] No cached streams, all {Count} are new", freshStreams.Count);
+                _logger.LogDebug("⚪ [CaveaDb] No cached streams, all {Count} are new", freshStreams.Count);
                 return result;
             }
 
@@ -1090,7 +1223,7 @@ namespace Cavea.Services
             result.TotalNew = newStreams.Count;
 
             _logger.LogDebug(
-                "⚪  [CaveaDb] Stream comparison: {Cached} cached, {Fresh} fresh, {New} new", 
+                "⚪ [CaveaDb] Stream comparison: {Cached} cached, {Fresh} fresh, {New} new", 
                 cachedStreams.Count, 
                 freshStreams.Count, 
                 newStreams.Count
@@ -1117,7 +1250,7 @@ namespace Cavea.Services
 
                 if (newStreams.Count == 0)
                 {
-                    _logger.LogDebug("⚪  [CaveaDb] No new streams to merge for {ItemId}", itemId);
+                    _logger.LogDebug("⚪ [CaveaDb] No new streams to merge for {ItemId}", itemId);
                     return true;
                 }
 
@@ -1186,12 +1319,12 @@ namespace Cavea.Services
                     await cmd.ExecuteNonQueryAsync();
                 }
 
-                _logger.LogInformation("⚪  [CaveaDb] Merged {Count} new streams for {ItemId}", newStreams.Count, itemId);
+                _logger.LogInformation("⚪ [CaveaDb] Merged {Count} new streams for {ItemId}", newStreams.Count, itemId);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to merge streams for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to merge streams for {ItemId}", itemId);
                 return false;
             }
         }
@@ -1301,12 +1434,12 @@ namespace Cavea.Services
                     await cmd.ExecuteNonQueryAsync();
                 }
 
-                _logger.LogInformation("⚪  [CaveaDb] Saved {Count} probed streams for {ItemId}", streams.Count, itemId);
+                _logger.LogInformation("⚪ [CaveaDb] Saved {Count} probed streams for {ItemId}", streams.Count, itemId);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save probed streams for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to save probed streams for {ItemId}", itemId);
                 return false;
             }
         }
@@ -1364,7 +1497,7 @@ namespace Cavea.Services
 
                 if (streams.Count > 0)
                 {
-                    _logger.LogInformation("⚪  [CaveaDb] Found {Count} cached probed streams for {ItemId}", streams.Count, itemId);
+                    _logger.LogInformation("⚪ [CaveaDb] Found {Count} cached probed streams for {ItemId}", streams.Count, itemId);
                     return streams;
                 }
 
@@ -1372,7 +1505,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get probed streams for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to get probed streams for {ItemId}", itemId);
                 return null;
             }
         }
@@ -1426,7 +1559,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to save catalog item {ImdbId}", item.ImdbId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to save catalog item {ImdbId}", item.ImdbId);
                 return false;
             }
         }
@@ -1486,7 +1619,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get catalog items by status {Status}", status);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to get catalog items by status {Status}", status);
                 return new List<CatalogItemInfo>();
             }
         }
@@ -1522,7 +1655,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to update catalog item {Id}", id);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to update catalog item {Id}", id);
                 return false;
             }
         }
@@ -1580,7 +1713,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaDb] Failed to get catalog items for {CatalogId}", catalogId);
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to get catalog items for {CatalogId}", catalogId);
                 return new List<CatalogItemInfo>();
             }
         }
@@ -1670,6 +1803,7 @@ namespace Cavea.Services
         public long? FileSize { get; set; }
         public DateTime? DateCreated { get; set; }
         public DateTime? DateModified { get; set; }
+        public DateTime LastUpdated { get; set; }
         public Dictionary<string, string>? ProviderIds { get; set; }
         public List<PersonInfo>? People { get; set; }
     }

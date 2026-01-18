@@ -91,7 +91,7 @@ namespace Cavea.Tasks
                 return;
             }
 
-            _logger.LogInformation("⚪  [Cavea] Found {Count} Stremio collections to sync.", collections.Count);
+            _logger.LogInformation("⚪ [Cavea] Found {Count} Stremio collections to sync.", collections.Count);
 
             var cfg = Plugin.Instance?.Configuration;
             var maxItems = cfg?.CatalogMaxItems ?? 500;
@@ -136,7 +136,7 @@ namespace Cavea.Tasks
                     // Determine type to try
                     var type = specificType ?? (catalogId.Contains("series") ? "series" : "movie");
 
-                    _logger.LogInformation("⚪  [Cavea] Syncing collection '{Name}' (CatalogId: {CatalogId}, SpecificType: {SpecificType})",
+                    _logger.LogInformation("⚪ [Cavea] Syncing collection '{Name}' (CatalogId: {CatalogId}, SpecificType: {SpecificType})",
                         collection.Name, catalogId, specificType ?? "null");
 
                      await SyncCatalogDirectly(collection, catalogId, type, aiostreamsUrl, maxItems, specificType, cancellationToken)
@@ -144,7 +144,7 @@ namespace Cavea.Tasks
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "⚪  [Cavea] Failed to sync collection '{Name}'", collection.Name);
+                    _logger.LogError(ex, "⚪ [Cavea] Failed to sync collection '{Name}'", collection.Name);
                 }
 
                 done++;
@@ -171,7 +171,7 @@ namespace Cavea.Tasks
                 
                 if (items.Count > 0)
                 {
-                    _logger.LogInformation("⚪  [Cavea] Found {Count} items with type '{Type}' for catalog {CatalogId}", 
+                    _logger.LogInformation("⚪ [Cavea] Found {Count} items with type '{Type}' for catalog {CatalogId}", 
                         items.Count, tryType, catalogId);
                     
                     await ProcessCatalogItems(collection, items, libraryManager, collectionManager, tryType, catalogId, maxItems, ct)
@@ -180,7 +180,7 @@ namespace Cavea.Tasks
                 }
             }
             
-            _logger.LogWarning("⚪  [Cavea] No items found in catalog {CatalogId} with either type", catalogId);
+            _logger.LogWarning("⚪ [Cavea] No items found in catalog {CatalogId} with either type", catalogId);
         }
 
         private async Task<List<CatalogItem>> FetchCatalogItems(string aiostreamsUrl, string catalogId, string type, int maxItems, CancellationToken ct)
@@ -221,7 +221,7 @@ namespace Cavea.Tasks
                     ? $"{aiostreamsUrl}/catalog/{type}/{encodedId}/skip={skip}.json"
                     : $"{aiostreamsUrl}/catalog/{type}/{encodedId}.json";
 
-                _logger.LogDebug("⚪  [Cavea] Fetching catalog URL: {Url}", url);
+                _logger.LogDebug("⚪ [Cavea] Fetching catalog URL: {Url}", url);
 
                 try
                 {
@@ -248,7 +248,7 @@ namespace Cavea.Tasks
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogDebug("⚪  [Cavea] Failed to fetch catalog page for type {Type}: {Msg}", type, ex.Message);
+                    _logger.LogDebug("⚪ [Cavea] Failed to fetch catalog page for type {Type}: {Msg}", type, ex.Message);
                     break;
                 }
             }
@@ -258,7 +258,7 @@ namespace Cavea.Tasks
 
         private async Task ProcessCatalogItems(BoxSet collection, List<CatalogItem> items, ILibraryManager libraryManager, ICollectionManager collectionManager, string type, string catalogId, int maxItems, CancellationToken ct)
         {
-            _logger.LogInformation("⚪  [Cavea] Fetched {Count} items from catalog {CatalogId}", items.Count, catalogId);
+            _logger.LogInformation("⚪ [Cavea] Fetched {Count} items from catalog {CatalogId}", items.Count, catalogId);
 
             // Get existing items in collection
             var linkedIds = collection.LinkedChildren
@@ -281,7 +281,7 @@ namespace Cavea.Tasks
             var missing = items.Where(i =>
                 !string.IsNullOrEmpty(i.ImdbId) && !existingImdbIds.Contains(i.ImdbId)).ToList();
 
-            _logger.LogInformation("⚪  [Cavea] Collection has {Existing} items, catalog has {Total}, {Missing} missing.",
+            _logger.LogInformation("⚪ [Cavea] Collection has {Existing} items, catalog has {Total}, {Missing} missing.",
                 existingImdbIds.Count, items.Count, missing.Count);
             
             // Update stored catalog total if changed
@@ -290,19 +290,19 @@ namespace Cavea.Tasks
             {
                 collection.ProviderIds["Stremio.CatalogTotal"] = catalogTotal;
                 await collection.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
-                _logger.LogInformation("⚪  [Cavea] Updated catalog total: {Total}", catalogTotal);
+                _logger.LogInformation("⚪ [Cavea] Updated catalog total: {Total}", catalogTotal);
             }
 
             if (missing.Count == 0)
             {
-                _logger.LogInformation("⚪  [Cavea] Collection '{Name}' is already up to date.", collection.Name);
+                _logger.LogInformation("⚪ [Cavea] Collection '{Name}' is already up to date.", collection.Name);
                 return;
             }
 
             // Strict Limit Check
             if (linkedIds.Length >= maxItems)
             {
-                _logger.LogInformation("⚪  [Cavea] Collection has reached max items limit ({Limit}). Stopping sync.", maxItems);
+                _logger.LogInformation("⚪ [Cavea] Collection has reached max items limit ({Limit}). Stopping sync.", maxItems);
                 return;
             }
 
@@ -314,7 +314,7 @@ namespace Cavea.Tasks
             // Limit the number of items we will try to add
             var itemsToProcess = missing.Take(maxItems - linkedIds.Length).ToList();
             
-            _logger.LogInformation("⚪  [Cavea] Starting batch import for {Count} items (type: {Type})...", itemsToProcess.Count, mediaType);
+            _logger.LogInformation("⚪ [Cavea] Starting batch import for {Count} items (type: {Type})...", itemsToProcess.Count, mediaType);
 
             var isSeries = mediaType.Equals("tv", StringComparison.OrdinalIgnoreCase);
             var cfg = Plugin.Instance?.Configuration;
@@ -324,7 +324,7 @@ namespace Cavea.Tasks
             if (isSeries)
             {
                 var seriesDelay = cfg?.SeriesImportDelayMs ?? 2000;
-                _logger.LogInformation("⚪  [Cavea] Processing {Count} series SEQUENTIALLY with {Delay}ms delay between each to prevent rate limiting", 
+                _logger.LogInformation("⚪ [Cavea] Processing {Count} series SEQUENTIALLY with {Delay}ms delay between each to prevent rate limiting", 
                     itemsToProcess.Count, seriesDelay);
                 
                 for (int i = 0; i < itemsToProcess.Count; i++)
@@ -335,7 +335,7 @@ namespace Cavea.Tasks
                     try
                     {
                         var imdbId = item.ImdbId!;
-                        _logger.LogInformation("⚪  [Cavea] [{Current}/{Total}] Processing series: {Name} ({ImdbId})", 
+                        _logger.LogInformation("⚪ [Cavea] [{Current}/{Total}] Processing series: {Name} ({ImdbId})", 
                             i + 1, itemsToProcess.Count, item.Name ?? imdbId, imdbId);
 
                         // Check if already in library
@@ -354,30 +354,30 @@ namespace Cavea.Tasks
                             if (!string.IsNullOrEmpty(importedIdStr) && Guid.TryParse(importedIdStr, out var newGuid))
                             {
                                 importedIds.Add(newGuid);
-                                _logger.LogInformation("⚪  [Cavea] ✓ Successfully imported series: {Name}", item.Name ?? imdbId);
+                                _logger.LogInformation("⚪ [Cavea] ✓ Successfully imported series: {Name}", item.Name ?? imdbId);
                             }
                             else
                             {
                                 failed++;
-                                _logger.LogWarning("⚪  [Cavea] ✗ Failed to import series: {Name}", item.Name ?? imdbId);
+                                _logger.LogWarning("⚪ [Cavea] ✗ Failed to import series: {Name}", item.Name ?? imdbId);
                             }
                         }
                         else
                         {
                             importedIds.Add(libraryItem.Id);
-                            _logger.LogDebug("⚪  [Cavea] ✓ Series already exists: {Name}", item.Name ?? imdbId);
+                            _logger.LogDebug("⚪ [Cavea] ✓ Series already exists: {Name}", item.Name ?? imdbId);
                         }
                         
                         // Delay between series imports (except after the last one)
                         if (i < itemsToProcess.Count - 1)
                         {
-                            _logger.LogDebug("⚪  [Cavea] Waiting {Delay}ms before next series...", seriesDelay);
+                            _logger.LogDebug("⚪ [Cavea] Waiting {Delay}ms before next series...", seriesDelay);
                             await Task.Delay(seriesDelay, ct).ConfigureAwait(false);
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "⚪  [Cavea] Failed to process series {ImdbId}: {Message}", item.ImdbId, ex.Message);
+                        _logger.LogError(ex, "⚪ [Cavea] Failed to process series {ImdbId}: {Message}", item.ImdbId, ex.Message);
                         failed++;
                     }
                 }
@@ -386,7 +386,7 @@ namespace Cavea.Tasks
             {
                 // For MOVIES: Use parallel processing (but limit parallelism to avoid rate limits)
                 var maxParallel = cfg?.MaxParallelMovieImports ?? 2;
-                _logger.LogInformation("⚪  [Cavea] Processing {Count} movies with {Parallel} parallel imports", 
+                _logger.LogInformation("⚪ [Cavea] Processing {Count} movies with {Parallel} parallel imports", 
                     itemsToProcess.Count, maxParallel);
                 
                 await Parallel.ForEachAsync(itemsToProcess, new ParallelOptions { MaxDegreeOfParallelism = maxParallel, CancellationToken = ct }, async (item, token) =>
@@ -424,7 +424,7 @@ namespace Cavea.Tasks
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "⚪  [Cavea] Failed to process movie {ImdbId}", item.ImdbId);
+                        _logger.LogWarning(ex, "⚪ [Cavea] Failed to process movie {ImdbId}", item.ImdbId);
                         failed++;
                     }
                 }).ConfigureAwait(false);
@@ -434,17 +434,17 @@ namespace Cavea.Tasks
             {
                 try 
                 {
-                    _logger.LogInformation("⚪  [Cavea] Adding {Count} items to collection '{Name}' in one batch...", importedIds.Count, collection.Name);
+                    _logger.LogInformation("⚪ [Cavea] Adding {Count} items to collection '{Name}' in one batch...", importedIds.Count, collection.Name);
                     await collectionManager.AddToCollectionAsync(collection.Id, importedIds.Distinct().ToArray()).ConfigureAwait(false);
                     _logger.LogInformation("⚪ [Cavea] Batch add successful.");
                 }
                 catch (Exception ex)
                 {
-                     _logger.LogError(ex, "⚪  [Cavea] Failed to batch add items to collection.");
+                     _logger.LogError(ex, "⚪ [Cavea] Failed to batch add items to collection.");
                 }
             }
 
-            _logger.LogInformation("⚪  [Cavea] Import complete. Success: {Success}, Failed: {Failed}", importedIds.Count, failed);
+            _logger.LogInformation("⚪ [Cavea] Import complete. Success: {Success}, Failed: {Failed}", importedIds.Count, failed);
         }
 
         private async Task<string?> ImportItemViaReflection(string imdbId, string type)
@@ -535,7 +535,7 @@ namespace Cavea.Tasks
                                              }
                                          }
                                      }
-                                     catch (Exception ex) { _logger.LogWarning("⚪  [Cavea] Failed to manually construct GelatoItemRepository in SyncTask: {Msg}", ex.Message); }
+                                     catch (Exception ex) { _logger.LogWarning("⚪ [Cavea] Failed to manually construct GelatoItemRepository in SyncTask: {Msg}", ex.Message); }
                                  }
 
                                 if (arg == null)
@@ -577,7 +577,7 @@ namespace Cavea.Tasks
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "⚪  [Cavea] Failed to create transient GelatoManager in SyncTask, using singleton.");
+                    _logger.LogWarning(ex, "⚪ [Cavea] Failed to create transient GelatoManager in SyncTask, using singleton.");
                 }
 
                 if (transientManager != null) managerToUse = transientManager;
@@ -623,7 +623,7 @@ namespace Cavea.Tasks
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning("⚪  [Cavea] Failed to fetch full meta for {Id} in SyncTask: {Msg}", imdbId, ex.Message);
+                    _logger.LogWarning("⚪ [Cavea] Failed to fetch full meta for {Id} in SyncTask: {Msg}", imdbId, ex.Message);
                 }
 
                 // 2. Fallback: Create stub StremioMeta object
@@ -657,7 +657,7 @@ namespace Cavea.Tasks
                 var parentFolder = getFolderMethod?.Invoke(managerToUse, new object[] { Guid.Empty });
                 if (parentFolder == null)
                 {
-                    _logger.LogError("⚪  [Cavea] Root folder not found for {Type}", type);
+                    _logger.LogError("⚪ [Cavea] Root folder not found for {Type}", type);
                     return null;
                 }
 
@@ -692,7 +692,7 @@ namespace Cavea.Tasks
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [Cavea] Reflection import failed for {ImdbId}", imdbId);
+                _logger.LogError(ex, "⚪ [Cavea] Reflection import failed for {ImdbId}", imdbId);
                 return null;
             }
         }
@@ -707,11 +707,11 @@ namespace Cavea.Tasks
                 // Gelato config is at: plugins/configurations/Gelato.xml
                 var gelatoConfigPath = System.IO.Path.Combine(pluginsPath, "configurations", "Gelato.xml");
 
-                _logger.LogDebug("⚪  [Cavea] Looking for Gelato config at {Path}", gelatoConfigPath);
+                _logger.LogDebug("⚪ [Cavea] Looking for Gelato config at {Path}", gelatoConfigPath);
 
                 if (!System.IO.File.Exists(gelatoConfigPath))
                 {
-                    _logger.LogWarning("⚪  [Cavea] Gelato config file not found at {Path}", gelatoConfigPath);
+                    _logger.LogWarning("⚪ [Cavea] Gelato config file not found at {Path}", gelatoConfigPath);
                     return null;
                 }
 
@@ -730,12 +730,12 @@ namespace Cavea.Tasks
                 // Remove /manifest.json to get the base URL
                 var baseUrl = manifestUrl.Replace("/manifest.json", "").TrimEnd('/');
                 
-                _logger.LogInformation("⚪  [Cavea] Using Gelato aiostreams URL: {Url}", baseUrl);
+                _logger.LogInformation("⚪ [Cavea] Using Gelato aiostreams URL: {Url}", baseUrl);
                 return baseUrl;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [Cavea] Failed to read Gelato configuration");
+                _logger.LogError(ex, "⚪ [Cavea] Failed to read Gelato configuration");
             }
             return null;
         }

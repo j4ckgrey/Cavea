@@ -79,7 +79,7 @@ namespace Cavea.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [Cavea.Subtitle] Failed to fetch external subtitles for {ItemId}", itemId);
+                _logger.LogError(ex, "⚪ [Cavea.Subtitle] Failed to fetch external subtitles for {ItemId}", itemId);
                 return StatusCode(500, new { error = "Failed to fetch subtitles", details = ex.Message });
             }
         }
@@ -95,7 +95,7 @@ namespace Cavea.Api
             [FromQuery] string? subId,
             [FromQuery] string? format) // "vtt" for web clients that need conversion
         {
-            _logger.LogInformation("⚪  [Cavea.Subtitle]  [SUBTITLE PROXY] Request received: itemId={ItemId}, lang={Lang}, subId={SubId}, format={Format}", itemId, lang, subId, format);
+            _logger.LogInformation("⚪ [Cavea.Subtitle]  [SUBTITLE PROXY] Request received: itemId={ItemId}, lang={Lang}, subId={SubId}, format={Format}", itemId, lang, subId, format);
 
             if (string.IsNullOrEmpty(itemId))
             {

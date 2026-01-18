@@ -40,7 +40,7 @@ namespace Cavea.Api
             [FromQuery] string itemType,
             [FromQuery] string? jellyfinId)
         {
-            _logger.LogInformation("⚪  [Cavea.Library] CheckLibraryStatus: imdbId={ImdbId}, tmdbId={TmdbId}, itemType={ItemType}, jellyfinId={JellyfinId}",
+            _logger.LogInformation("⚪ [Cavea.Library] CheckLibraryStatus: imdbId={ImdbId}, tmdbId={TmdbId}, itemType={ItemType}, jellyfinId={JellyfinId}",
                 imdbId ?? "null", tmdbId ?? "null", itemType ?? "null", jellyfinId ?? "null");
             
             try
@@ -105,7 +105,7 @@ namespace Cavea.Api
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "⚪  [Cavea.Library] Error querying library items");
+                    _logger.LogWarning(ex, "⚪ [Cavea.Library] Error querying library items");
                 }
 
                 var config = Plugin.Instance?.Configuration;
@@ -149,7 +149,7 @@ namespace Cavea.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [Cavea.Library] Error checking library status");
+                _logger.LogError(ex, "⚪ [Cavea.Library] Error checking library status");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }

@@ -66,7 +66,7 @@ namespace Cavea.Api
                     ms.Path.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) &&
                    ms.Protocol != MediaBrowser.Model.MediaInfo.MediaProtocol.Http)
                {
-                   _logger.LogWarning("⚪  [Cavea.Stream] Fixing Protocol for {Id}. Was {Proto}, setting to Http. Path: {Path}", ms.Id, ms.Protocol, ms.Path);
+                   _logger.LogWarning("⚪ [Cavea.Stream] Fixing Protocol for {Id}. Was {Proto}, setting to Http. Path: {Path}", ms.Id, ms.Protocol, ms.Path);
                    ms.Protocol = MediaBrowser.Model.MediaInfo.MediaProtocol.Http;
                }
             }
@@ -91,7 +91,7 @@ namespace Cavea.Api
                 })
                 .ToList();
 
-            _logger.LogInformation("⚪  [Cavea.Stream] Found {Count} audio streams in MediaSource from manager.", audioStreams.Count);
+            _logger.LogInformation("⚪ [Cavea.Stream] Found {Count} audio streams in MediaSource from manager.", audioStreams.Count);
 
             // 3. Get embedded subtitles from Jellyfin
             // For web clients: skip embedded subs - they can only use external Gelato subs or burn-in
@@ -116,7 +116,7 @@ namespace Cavea.Api
                         url = !string.IsNullOrEmpty(s.DeliveryUrl) ? s.DeliveryUrl : (string?)null
                     })
                     .ToList();
-                _logger.LogInformation("⚪  [Cavea.Stream] Found {Count} embedded subtitle streams.", embeddedSubs.Count);
+                _logger.LogInformation("⚪ [Cavea.Stream] Found {Count} embedded subtitle streams.", embeddedSubs.Count);
             }
 
             // 4. NO AUTO-FETCH of external subtitles. 
@@ -131,7 +131,7 @@ namespace Cavea.Api
             // If no embedded streams found, try probing if applicable (fallback logic)
             if (audioStreams.Count == 0 && embeddedSubs.Count == 0 && targetSource.SupportsProbing && targetSource.Protocol == MediaBrowser.Model.MediaInfo.MediaProtocol.Http)
             {
-               _logger.LogWarning("⚪  [Cavea.Stream] No streams found in MediaSource. Attempting Backup Probing for {Url}", targetSource.Path);
+               _logger.LogWarning("⚪ [Cavea.Stream] No streams found in MediaSource. Attempting Backup Probing for {Url}", targetSource.Path);
                var url = targetSource.Path;
                if (url.StartsWith("stremio://", StringComparison.OrdinalIgnoreCase))
                {

@@ -31,7 +31,7 @@ namespace Cavea.Services
         {
             try
             {
-                _logger.LogInformation("⚪  [Cavea.Subtitle] FetchExternalSubtitles START for {ItemId}", itemId);
+                _logger.LogInformation("⚪ [Cavea.Subtitle] FetchExternalSubtitles START for {ItemId}", itemId);
 
                 var cfg = Plugin.Instance?.Configuration;
                 if (cfg == null || !cfg.EnableExternalSubtitles)
@@ -45,7 +45,7 @@ namespace Cavea.Services
 
                 if (!Guid.TryParse(itemId, out var itemGuid))
                 {
-                    _logger.LogWarning("⚪  [Cavea.Subtitle] Invalid GUID format: {ItemId}", itemId);
+                    _logger.LogWarning("⚪ [Cavea.Subtitle] Invalid GUID format: {ItemId}", itemId);
                     return null;
                 }
 
@@ -72,7 +72,7 @@ namespace Cavea.Services
                 var item = _libraryManager.GetItemById(itemGuid);
                 if (item == null)
                 {
-                    _logger.LogWarning("⚪  [Cavea.Subtitle] Item not found in library: {ItemId}", itemId);
+                    _logger.LogWarning("⚪ [Cavea.Subtitle] Item not found in library: {ItemId}", itemId);
                     return null;
                 }
 
@@ -86,12 +86,12 @@ namespace Cavea.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "⚪  [Cavea.Subtitle] FromBaseItem threw exception");
+                    _logger.LogError(ex, "⚪ [Cavea.Subtitle] FromBaseItem threw exception");
                 }
 
                 if (stremioUri == null)
                 {
-                    _logger.LogWarning("⚪  [Cavea.Subtitle] Could not build StremioUri for item {ItemId}", itemId);
+                    _logger.LogWarning("⚪ [Cavea.Subtitle] Could not build StremioUri for item {ItemId}", itemId);
                     return null;
                 }
 
@@ -119,7 +119,7 @@ namespace Cavea.Services
 
                 if (cachedSubs == null)
                 {
-                    _logger.LogInformation("⚪  [Cavea.Subtitle] GetSubtitlesAsync result is NULL for {ItemId}", itemId);
+                    _logger.LogInformation("⚪ [Cavea.Subtitle] GetSubtitlesAsync result is NULL for {ItemId}", itemId);
                     return null;
                 }
 
@@ -148,14 +148,14 @@ namespace Cavea.Services
 
                 if (subtitles.Count > 0)
                 {
-                    _logger.LogInformation("⚪  [Cavea.Subtitle] Fetched {Count} external subtitles for {ItemId}", subtitles.Count, itemId);
+                    _logger.LogInformation("⚪ [Cavea.Subtitle] Fetched {Count} external subtitles for {ItemId}", subtitles.Count, itemId);
                 }
 
                 return subtitles;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [Cavea.Subtitle] EXCEPTION in FetchExternalSubtitlesAsync for {ItemId}: {Message}", itemId, ex.Message);
+                _logger.LogError(ex, "⚪ [Cavea.Subtitle] EXCEPTION in FetchExternalSubtitlesAsync for {ItemId}: {Message}", itemId, ex.Message);
                 return null;
             }
         }

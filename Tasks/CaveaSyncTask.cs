@@ -73,7 +73,7 @@ namespace Cavea.Tasks
                     return;
                 }
 
-                _logger.LogInformation("⚪  [CaveaSyncTask] Syncing {Count} pending items", pendingItems.Count);
+                _logger.LogInformation("⚪ [CaveaSyncTask] Syncing {Count} pending items", pendingItems.Count);
 
                 var syncedCount = 0;
                 var failedCount = 0;
@@ -101,7 +101,7 @@ namespace Cavea.Tasks
                         if (existingItem != null)
                         {
                             jellyfinItemId = existingItem.Id.ToString();
-                            _logger.LogDebug("⚪  [CaveaSyncTask] Item already exists: {Title} ({ImdbId})", item.Title, item.ImdbId);
+                            _logger.LogDebug("⚪ [CaveaSyncTask] Item already exists: {Title} ({ImdbId})", item.Title, item.ImdbId);
                         }
                         else
                         {
@@ -112,11 +112,11 @@ namespace Cavea.Tasks
                             {
                                 await _dbService.UpdateCatalogItemStatusAsync(item.Id, "failed", null, "Gelato import returned null");
                                 failedCount++;
-                                _logger.LogWarning("⚪  [CaveaSyncTask] Failed to import: {Title} ({ImdbId})", item.Title, item.ImdbId);
+                                _logger.LogWarning("⚪ [CaveaSyncTask] Failed to import: {Title} ({ImdbId})", item.Title, item.ImdbId);
                                 continue;
                             }
 
-                            _logger.LogInformation("⚪  [CaveaSyncTask] Successfully imported: {Title} ({ImdbId})", item.Title, item.ImdbId);
+                            _logger.LogInformation("⚪ [CaveaSyncTask] Successfully imported: {Title} ({ImdbId})", item.Title, item.ImdbId);
                         }
 
                         // Update status to synced
@@ -128,21 +128,21 @@ namespace Cavea.Tasks
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "⚪  [CaveaSyncTask] Error syncing item: {Title} ({ImdbId})", item.Title, item.ImdbId);
+                        _logger.LogError(ex, "⚪ [CaveaSyncTask] Error syncing item: {Title} ({ImdbId})", item.Title, item.ImdbId);
                         await _dbService.UpdateCatalogItemStatusAsync(item.Id, "failed", null, ex.Message);
                         failedCount++;
                     }
                 }
 
                 _logger.LogInformation(
-                    "⚪  [CaveaSyncTask] Sync completed. Synced: {Synced}, Failed: {Failed}",
+                    "⚪ [CaveaSyncTask] Sync completed. Synced: {Synced}, Failed: {Failed}",
                     syncedCount, failedCount);
 
                 progress.Report(100);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaSyncTask] Sync task failed");
+                _logger.LogError(ex, "⚪ [CaveaSyncTask] Sync task failed");
                 throw;
             }
         }
@@ -225,7 +225,7 @@ namespace Cavea.Tasks
 
                 if (parentFolder == null)
                 {
-                    _logger.LogWarning("⚪  [CaveaSyncTask] Parent folder not found: {Path}", folderPath);
+                    _logger.LogWarning("⚪ [CaveaSyncTask] Parent folder not found: {Path}", folderPath);
                     return null;
                 }
 
@@ -287,7 +287,7 @@ namespace Cavea.Tasks
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [CaveaSyncTask] Failed to import via Gelato: {ImdbId}", item.ImdbId);
+                _logger.LogError(ex, "⚪ [CaveaSyncTask] Failed to import via Gelato: {ImdbId}", item.ImdbId);
                 return null;
             }
         }

@@ -45,7 +45,7 @@ namespace Cavea.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [Cavea.Stream] Failed to get Gelato Stremio URL via reflection");
+                _logger.LogError(ex, "⚪ [Cavea.Stream] Failed to get Gelato Stremio URL via reflection");
             }
             return null;
         }
@@ -73,7 +73,7 @@ namespace Cavea.Services
                 
                 if (parts.Length < 2) 
                 {
-                    _logger.LogWarning("⚪  [Cavea.Stream] Stremio URL format invalid: {Url}", stremioUrl);
+                    _logger.LogWarning("⚪ [Cavea.Stream] Stremio URL format invalid: {Url}", stremioUrl);
                     return null;
                 }
                 
@@ -84,7 +84,7 @@ namespace Cavea.Services
                 // 3. Request stream list from addon
                 // Endpoint: {addonUrl}/stream/{type}/{id}.json
                 var requestUrl = $"{addonUrl}/stream/{type}/{id}.json";
-                _logger.LogInformation("⚪  [Cavea.Stream] Resolving Stremio URL: {StremioUrl} -> Fetching {RequestUrl}", stremioUrl, requestUrl);
+                _logger.LogInformation("⚪ [Cavea.Stream] Resolving Stremio URL: {StremioUrl} -> Fetching {RequestUrl}", stremioUrl, requestUrl);
                 
                 using var client = new HttpClient();
                 client.Timeout = TimeSpan.FromSeconds(10);
@@ -99,19 +99,19 @@ namespace Cavea.Services
                         if (stream.TryGetProperty("url", out var urlProp) && !string.IsNullOrEmpty(urlProp.GetString()))
                         {
                             var resolvedUrl = urlProp.GetString();
-                            _logger.LogInformation("⚪  [Cavea.Stream] Resolved Stremio URL {StremioUrl} -> {ResolvedUrl}", stremioUrl, resolvedUrl);
+                            _logger.LogInformation("⚪ [Cavea.Stream] Resolved Stremio URL {StremioUrl} -> {ResolvedUrl}", stremioUrl, resolvedUrl);
                             return resolvedUrl;
                         }
                     }
                 }
                 else
                 {
-                    _logger.LogWarning("⚪  [Cavea.Stream] Check for streams returned empty for {StremioUrl}", stremioUrl);
+                    _logger.LogWarning("⚪ [Cavea.Stream] Check for streams returned empty for {StremioUrl}", stremioUrl);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [Cavea.Stream] Error resolving Stremio URL: {Url}", stremioUrl);
+                _logger.LogError(ex, "⚪ [Cavea.Stream] Error resolving Stremio URL: {Url}", stremioUrl);
             }
             return null;
         }
@@ -182,7 +182,7 @@ namespace Cavea.Services
                 if (!exited)
                 {
                     try { proc.Kill(); } catch { }
-                    _logger.LogWarning("⚪  [Cavea.Stream] FFprobe timed out for {Url}", url);
+                    _logger.LogWarning("⚪ [Cavea.Stream] FFprobe timed out for {Url}", url);
                     return (null, "timeout");
                 }
 
@@ -195,12 +195,12 @@ namespace Cavea.Services
             if (!string.IsNullOrEmpty(errText))
             {
                 if (errText.Contains("403 Forbidden") || errText.Contains("404 Not Found") || string.IsNullOrEmpty(outJson))
-                    _logger.LogWarning("⚪  [Cavea.Stream] FFprobe Stderr: {Err}", errText);
+                    _logger.LogWarning("⚪ [Cavea.Stream] FFprobe Stderr: {Err}", errText);
             }
 
             if (string.IsNullOrEmpty(outJson)) return null;
             
-            _logger.LogDebug("⚪  [Cavea.Stream] FFprobe Output: {Json}", outJson);
+            _logger.LogDebug("⚪ [Cavea.Stream] FFprobe Output: {Json}", outJson);
 
             try
             {
@@ -240,12 +240,12 @@ namespace Cavea.Services
                     }
                 }
                 
-                _logger.LogInformation("⚪  [Cavea.Stream] Parsed Probe: {AudioCount} audio, {SubsCount} subs", res.Audio.Count, res.Subtitles.Count);
+                _logger.LogInformation("⚪ [Cavea.Stream] Parsed Probe: {AudioCount} audio, {SubsCount} subs", res.Audio.Count, res.Subtitles.Count);
                 return res;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [Cavea.Stream] FFprobe Parsing Error");
+                _logger.LogError(ex, "⚪ [Cavea.Stream] FFprobe Parsing Error");
                 return null;
             }
         }

@@ -19,13 +19,16 @@ namespace Cavea.Api
     {
         private readonly ILogger<SearchModalMetadataController> _logger;
         private readonly ILibraryManager _libraryManager;
+        private readonly CaveaDbService _caveaDb;
 
         public SearchModalMetadataController(
             ILogger<SearchModalMetadataController> logger,
-            ILibraryManager libraryManager)
+            ILibraryManager libraryManager,
+            CaveaDbService caveaDb)
         {
             _logger = logger;
             _libraryManager = libraryManager;
+            _caveaDb = caveaDb;
         }
 
         [HttpGet("search")]
@@ -35,12 +38,12 @@ namespace Cavea.Api
             [FromQuery] string? itemType, // "movie" or "series"
             [FromQuery] bool includeCredits = false)
         {
-            _logger.LogInformation("⚪  [Cavea.SearchMetadata] GetSearchMetadata: tmdbId={TmdbId}, imdbId={ImdbId}, itemType={ItemType}", 
+            _logger.LogInformation("⚪ [Cavea.SearchMetadata] GetSearchMetadata: tmdbId={TmdbId}, imdbId={ImdbId}, itemType={ItemType}", 
                 tmdbId ?? "null", imdbId ?? "null", itemType ?? "null");
             
             try
             {
-                // 1. Determine Stremio ID
+                // 1. Determine Stremio ID (which is our persistent ItemId in Cavea DB)
                 string? stremioId = null;
                 if (!string.IsNullOrEmpty(imdbId))
                 {
@@ -56,7 +59,32 @@ namespace Cavea.Api
                     return BadRequest(new { error = "Either imdbId or tmdbId is required" });
                 }
 
-                // 2. Determine Stremio MediaType enum
+                // 2. CHECK CACHE FIRST
+                var cachedMetadata = await _caveaDb.GetCompleteItemMetadataAsync(stremioId);
+                if (cachedMetadata != null)
+                {
+                    _logger.LogInformation("⚪ [Cavea.SearchMetadata] Found cached metadata for {Id}", stremioId);
+                    
+                    // Map to simple format expected by frontend
+                    var mappedCache = new Dictionary<string, object?>();
+                    mappedCache["name"] = cachedMetadata.Name;
+                    mappedCache["description"] = cachedMetadata.Overview;
+                    mappedCache["year"] = cachedMetadata.Year;
+                    mappedCache["background"] = cachedMetadata.BackdropUrl;
+                    mappedCache["logo"] = cachedMetadata.LogoUrl;
+                    mappedCache["imdbRating"] = cachedMetadata.CommunityRating;
+                    mappedCache["genres"] = cachedMetadata.Genres;
+                    mappedCache["runtime"] = cachedMetadata.Runtime; // Ticks or minutes? Assuming usage downstream handles it
+                    
+                    if (includeCredits && cachedMetadata.People != null)
+                    {
+                         mappedCache["credits"] = new { cast = cachedMetadata.People.Select(p => new { name = p.Name, role = p.Role, profile = p.ImageUrl }) };
+                    }
+
+                    return Ok(mappedCache);
+                }
+
+                // 3. Determine Stremio MediaType enum
                 // Gelato.Common.StremioMediaType: Unknown=0, Movie=1, Series=2
                 object? mediaTypeEnum = null;
                 if (string.Equals(itemType, "movie", StringComparison.OrdinalIgnoreCase))
@@ -75,7 +103,7 @@ namespace Cavea.Api
                     return BadRequest(new { error = "Invalid or missing itemType (must be 'movie', 'series', or 'episode')" });
                 }
 
-                // 3. Reflect into Gelato to get metadata
+                // 4. Reflect into Gelato to get metadata
                 var gelatoData = await FetchMetadataFromGelato(stremioId, mediaTypeEnum);
                 
                 if (gelatoData != null)
@@ -84,7 +112,7 @@ namespace Cavea.Api
                      try 
                      {
                          var json = JsonSerializer.Serialize(gelatoData);
-                         _logger.LogInformation("⚪  [Cavea.SearchMetadata] Gelato response: {Json}", json);
+                         _logger.LogInformation("⚪ [Cavea.SearchMetadata] Gelato response: {Json}", json);
 
                          // Robust Mapping
                          using var doc = JsonDocument.Parse(json);
@@ -132,7 +160,30 @@ namespace Cavea.Api
 
                          var rtProp = FindProp(new[] { "RottenTomatoes", "CriticRating", "TomatoMeter" });
                          mapped["rottenTomatoes"] = rtProp?.ToString();
+                        
+                         // 5. SAVE TO DB (Cache it!)
+                         var completeMeta = new CompleteItemMetadata
+                         {
+                             ItemId = stremioId,
+                             ItemType = itemType ?? "unknown",
+                             Name = mapped["name"]?.ToString(),
+                             Overview = mapped["description"]?.ToString(),
+                             BackdropUrl = mapped["background"]?.ToString(),
+                             LogoUrl = mapped["logo"]?.ToString(),
+                             ImdbId = imdbId,
+                             TmdbId = tmdbId,
+                             LastUpdated = DateTime.UtcNow
+                         };
 
+                         if (int.TryParse(mapped["year"]?.ToString()?.Split('-')[0], out var year))
+                             completeMeta.Year = year;
+
+                         if (float.TryParse(mapped["imdbRating"]?.ToString(), out var rating))
+                             completeMeta.CommunityRating = rating;
+                             
+                         if (mapped["genres"] is List<string> gList)
+                             completeMeta.Genres = gList;
+                             
                          // Map Credits (Cast)
                          if (includeCredits)
                          {
@@ -140,14 +191,38 @@ namespace Cavea.Api
                              if (castProp.HasValue && castProp.Value.ValueKind == JsonValueKind.Array)
                              {
                                  mapped["credits"] = new { cast = castProp.Value.Clone() };
+                                 
+                                 // Save people to DB too
+                                 completeMeta.People = new List<PersonInfo>();
+                                 int sort = 0;
+                                 foreach(var person in castProp.Value.EnumerateArray())
+                                 {
+                                     // Assuming primitive string array or simple object? Gelato usually returns strings or objects
+                                     if(person.ValueKind == JsonValueKind.String)
+                                     {
+                                         completeMeta.People.Add(new PersonInfo { Name = person.GetString()!, Type = "Actor", SortOrder = sort++ });
+                                     }
+                                     // Else if object... skipping complex parsing for now to keep it safe, Gelato cast is usually simple
+                                 }
                              }
+                         }
+                         
+                         // Save to DB asynchronously
+                         try 
+                         {
+                            await _caveaDb.SaveCompleteItemMetadataAsync(completeMeta);
+                         } 
+                         catch (Exception dbEx)
+                         {
+                             _logger.LogError(dbEx, "⚪ [Cavea.SearchMetadata] Failed to save metadata to cache");
+                             // Don't fail the request
                          }
 
                          return Ok(mapped);
                      }
                      catch(Exception ex)
                      {
-                         _logger.LogError(ex, "⚪  [Cavea.SearchMetadata] Error mapping Gelato response");
+                         _logger.LogError(ex, "⚪ [Cavea.SearchMetadata] Error mapping Gelato response");
                          return Ok(gelatoData); // Fallback
                      }
                 }
@@ -156,7 +231,7 @@ namespace Cavea.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [Cavea.SearchMetadata] Error getting metadata from Gelato");
+                _logger.LogError(ex, "⚪ [Cavea.SearchMetadata] Error getting metadata from Gelato");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -222,7 +297,7 @@ namespace Cavea.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚪  [Cavea.SearchMetadata] Reflection error fetching from Gelato");
+                _logger.LogError(ex, "⚪ [Cavea.SearchMetadata] Reflection error fetching from Gelato");
                 return null;
             }
         }
