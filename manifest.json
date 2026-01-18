@@ -9,16 +9,7 @@
     "imageUrl": "https://raw.githubusercontent.com/j4ckgrey/Cavea/main/Cavea.png",
     "versions": [
       {
-        "version": "0.1.1.9",
-        "changelog": "Fix episode metadata retrieval using Gelato SearchAsync fallback.",
-        "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/j4ckgrey/Cavea/releases/download/v0.1.1.9/Cavea_0.1.1.9.zip",
-        "checksum": "23c5afc18b8b4713f3ba8458d167fb92",
-        "checksumType": "md5",
-        "timestamp": "2026-01-18T00:00:00Z"
-      },
-      {
-        "version": "0.1.1.8",
+        "version": "0.1.1.10",
         "changelog": "Hotfix: Removed native runtime dependencies to fix BadImageFormatException on non-x64 systems (e.g., ARM, Windows).",
         "targetAbi": "10.11.0.0",
         "sourceUrl": "https://github.com/j4ckgrey/Cavea/releases/download/v0.1.1.8/Cavea_0.1.1.8.zip",
@@ -66,10 +57,10 @@
         "version": "0.1.1.3",
         "changelog": "Fixed subtitle proxy cache miss issue by ensuring fetched subtitles are saved to database and adding auto-recovery to proxy endpoint.",
         "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/j4ckgrey/Cavea/releases/download/v0.1.1.3/Cavea_0.1.1.3.zip",
-        "checksum": "75cf93711480d7ec2f59908a16cd7645",
+        "sourceUrl": "https://github.com/j4ckgrey/Cavea/releases/download/v0.1.1.10/Cavea_0.1.1.10.zip",
+        "checksum": "de447fd2aee94e662241691d1a16f813",
         "checksumType": "md5",
-        "timestamp": "2026-01-17T16:51:00Z"
+        "timestamp": "2026-01-18T02:46:52Z"
       },
       {
         "version": "0.1.1.2",

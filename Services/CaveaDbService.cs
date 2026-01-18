@@ -304,6 +304,14 @@ namespace Cavea.Services
                         UNIQUE(TmdbSeriesId, SeasonNumber, EpisodeNumber)
                     );
                     CREATE INDEX IF NOT EXISTS idx_tmdbepisodecache_lookup ON TmdbEpisodeCache(TmdbSeriesId, SeasonNumber, EpisodeNumber);
+
+                    CREATE TABLE IF NOT EXISTS TmdbCache (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        LookupKey TEXT NOT NULL UNIQUE,
+                        JsonData TEXT NOT NULL,
+                        CachedAt TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_tmdbcache_key ON TmdbCache(LookupKey);
                 ";
 
 
@@ -1001,6 +1009,71 @@ namespace Cavea.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "⚪ [CaveaDb] Failed to get cached TMDB episode {Sid} S{Sn}E{En}", tmdbSeriesId, season, episode);
+                return null;
+            }
+        }
+
+        #endregion
+
+        #region Generic TMDB Caching
+
+        public async Task<bool> SaveTmdbCacheAsync(string key, string jsonData)
+        {
+            try
+            {
+                EnsureConnection();
+                using var cmd = _connection!.CreateCommand();
+                cmd.CommandText = @"
+                    INSERT INTO TmdbCache (LookupKey, JsonData, CachedAt)
+                    VALUES (@key, @json, @date)
+                    ON CONFLICT(LookupKey) DO UPDATE SET
+                        JsonData = @json,
+                        CachedAt = @date
+                ";
+                cmd.Parameters.AddWithValue("@key", key);
+                cmd.Parameters.AddWithValue("@json", jsonData);
+                cmd.Parameters.AddWithValue("@date", DateTime.UtcNow.ToString("o"));
+
+                await cmd.ExecuteNonQueryAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to cache TMDB data for {Key}", key);
+                return false;
+            }
+        }
+
+        public async Task<string?> GetTmdbCacheAsync(string key)
+        {
+            try
+            {
+                EnsureConnection();
+                using var cmd = _connection!.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT JsonData, CachedAt FROM TmdbCache
+                    WHERE LookupKey = @key
+                ";
+                cmd.Parameters.AddWithValue("@key", key);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    var cachedAtStr = reader.GetString(1);
+                    if (DateTime.TryParse(cachedAtStr, out var cachedAt))
+                    {
+                        // Cache valid for 7 days
+                        if (DateTime.UtcNow - cachedAt < TimeSpan.FromDays(7))
+                        {
+                            return reader.GetString(0);
+                        }
+                    }
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to get cached TMDB data for {Key}", key);
                 return null;
             }
         }
@@ -1727,50 +1800,6 @@ namespace Cavea.Services
             _connection?.Close();
             _connection?.Dispose();
         }
-        public async Task<CompleteItemMetadata?> GetCompleteItemMetadataByTitleAsync(string title, int? year, string? itemType)
-        {
-            try
-            {
-                EnsureConnection();
-
-                var query = @"
-                    SELECT ItemId 
-                    FROM ItemMetadata 
-                    WHERE Name LIKE @title
-                ";
-                
-                if (year.HasValue)
-                {
-                    query += " AND (Year = @year OR Year = @year - 1 OR Year = @year + 1)"; 
-                }
-
-                if (!string.IsNullOrEmpty(itemType))
-                {
-                    query += " AND ItemType = @itemType";
-                }
-
-                query += " ORDER BY CASE WHEN Name = @exactName THEN 0 ELSE 1 END, Year DESC LIMIT 1";
-
-                using var cmd = _connection!.CreateCommand();
-                cmd.CommandText = query;
-                cmd.Parameters.AddWithValue("@title", title);
-                cmd.Parameters.AddWithValue("@exactName", title);
-                if (year.HasValue) cmd.Parameters.AddWithValue("@year", year.Value);
-                if (!string.IsNullOrEmpty(itemType)) cmd.Parameters.AddWithValue("@itemType", itemType);
-
-                using var reader = await cmd.ExecuteReaderAsync();
-                if (await reader.ReadAsync())
-                {
-                     return await GetCompleteItemMetadataAsync(reader.GetString(0));
-                }
-            }
-             catch (Exception ex)
-            {
-                _logger.LogError(ex, "⚪ [CaveaDb] Failed to get metadata by title {Title}", title);
-            }
-            return null;
-        }
-
     }
 
     /// <summary>

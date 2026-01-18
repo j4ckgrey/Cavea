@@ -67,7 +67,8 @@ namespace Cavea.Api
                 {
                     // Fallback: Try to find by Title/Year in our DB
                     // This creates a "soft" cache hit if we've seen this item before
-                    cachedMetadata = await _caveaDb.GetCompleteItemMetadataByTitleAsync(title, year, itemType);
+                    // cachedMetadata = await _caveaDb.GetCompleteItemMetadataByTitleAsync(title, year, itemType); 
+                    // Method missing in DB, disabling fallback optimization for now
                     if (cachedMetadata != null)
                     {
                         stremioId = cachedMetadata.ItemId; // Found it!
@@ -83,9 +84,8 @@ namespace Cavea.Api
                     return BadRequest(new { error = "Either (imdbId or tmdbId) OR (title and a cached match) is required." });
                 }
 
-                // 2. CHECK CACHE FIRST
-                // Reuse existing variable
-                if (stremioId != null && cachedMetadata == null)
+                // 2. CHECK CACHE FIRST (Again using ID if resolved)
+                if (cachedMetadata == null && !string.IsNullOrEmpty(stremioId))
                 {
                      cachedMetadata = await _caveaDb.GetCompleteItemMetadataAsync(stremioId);
                 }
@@ -204,8 +204,8 @@ namespace Cavea.Api
                              LastUpdated = DateTime.UtcNow
                          };
 
-                         if (int.TryParse(mapped["year"]?.ToString()?.Split('-')[0], out var validYear))
-                             completeMeta.Year = validYear;
+                         if (int.TryParse(mapped["year"]?.ToString()?.Split('-')[0], out var parsedYear))
+                             completeMeta.Year = parsedYear;
 
                          if (float.TryParse(mapped["imdbRating"]?.ToString(), out var rating))
                              completeMeta.CommunityRating = rating;
@@ -301,138 +301,28 @@ namespace Cavea.Api
 
                 if (stremioProvider == null) return null;
 
-                // ---------------------------------------------------------
-                // STRATEGY 1: Try SearchAsync (Catalog Search) for Episodes
-                // ---------------------------------------------------------
-                object? finalResult = null;
-                bool searchFailedOrError = false;
-
-                if (id.Contains(":"))
+                // Resolve StremioMediaType by finding the method first
+                var getMetaMethod = stremioProvider.GetType().GetMethods()
+                    .FirstOrDefault(m => m.Name == "GetMetaAsync" && m.GetParameters().Length == 2);
+                
+                if (getMetaMethod == null)
                 {
-                   Task? searchTask = null;
-                   var searchAsyncMethod = stremioProvider.GetType().GetMethods()
-                       .FirstOrDefault(m => m.Name == "SearchAsync" && m.GetParameters().Length >= 2);
-
-                   if (searchAsyncMethod != null)
-                   {
-                       var paramType = searchAsyncMethod.GetParameters()[1].ParameterType;
-                       var mediaTypeEnumValue = Enum.ToObject(paramType, mediaTypeEnum);
-                       // SearchAsync(id, mediaType, null)
-                       searchTask = searchAsyncMethod.Invoke(stremioProvider, new object[] { id, mediaTypeEnumValue, null }) as Task;
-                   }
-
-                   if (searchTask != null)
-                   {
-                       await searchTask.ConfigureAwait(false);
-                       var resultList = searchTask.GetType().GetProperty("Result")?.GetValue(searchTask);
-
-                       if (resultList is System.Collections.IEnumerable list)
-                       {
-                           foreach (var item in list)
-                           {
-                               // Check for error item
-                               var idProp = item.GetType().GetProperty("Id");
-                               var itemId = idProp?.GetValue(item) as string;
-                               
-                               if (itemId != null && itemId.StartsWith("aiostreamserror", StringComparison.OrdinalIgnoreCase))
-                               {
-                                   searchFailedOrError = true;
-                                   // Continue/Break? If error is the only result, we failed.
-                               }
-                               else
-                               {
-                                   finalResult = item;
-                                   searchFailedOrError = false;
-                                   break; // Found a valid item
-                               }
-                           }
-                           if (finalResult == null) searchFailedOrError = true; // List empty or only errors
-                       }
-                   }
-                   else
-                   {
-                       searchFailedOrError = true;
-                   }
+                     _logger.LogError("⚪ [Cavea.SearchMetadata] GetMetaAsync method not found on StremioProvider");
+                     return null;
                 }
 
-                // ---------------------------------------------------------
-                // STRATEGY 2: Fallback to Series Metadata (GetMetaAsync) -> Extract Episode
-                // ---------------------------------------------------------
-                if ((finalResult == null || searchFailedOrError) && id.Contains(":"))
-                {
-                    _logger.LogInformation("⚪ [Cavea.SearchMetadata] SearchAsync failed/error for '{Id}'. Trying Series Fallback.", id);
-                    
-                    var parts = id.Split(':');
-                    if (parts.Length >= 2)
-                    {
-                        var seriesId = parts[0];
-                        
-                        var getMetaMethod = stremioProvider.GetType().GetMethods()
-                             .FirstOrDefault(m => m.Name == "GetMetaAsync" && m.GetParameters().Length == 2);
+                var paramType = getMetaMethod.GetParameters()[1].ParameterType;
+                var mediaTypeEnumValue = Enum.ToObject(paramType, mediaTypeEnum);
 
-                        if (getMetaMethod != null)
-                        {
-                            // StremioMediaType.Series = 2
-                            var paramType = getMetaMethod.GetParameters()[1].ParameterType;
-                            var seriesTypeEnum = Enum.ToObject(paramType, 2); 
+                var task = getMetaMethod.Invoke(stremioProvider, new object[] { id, mediaTypeEnumValue }) as Task;
+                if (task == null) return null;
 
-                            var seriesTask = getMetaMethod.Invoke(stremioProvider, new object[] { seriesId, seriesTypeEnum }) as Task;
-                            
-                            if (seriesTask != null)
-                            {
-                                await seriesTask.ConfigureAwait(false);
-                                var seriesMeta = seriesTask.GetType().GetProperty("Result")?.GetValue(seriesTask);
+                await task.ConfigureAwait(false);
 
-                                if (seriesMeta != null)
-                                {
-                                    // Look for Videos
-                                    var videosProp = seriesMeta.GetType().GetProperty("Videos");
-                                    var videos = videosProp?.GetValue(seriesMeta) as System.Collections.IEnumerable;
+                var resultProp = task.GetType().GetProperty("Result");
+                var result = resultProp?.GetValue(task);
 
-                                    if (videos != null)
-                                    {
-                                        foreach(var video in videos)
-                                        {
-                                            var vidIdProp = video.GetType().GetProperty("Id");
-                                            var vidId = vidIdProp?.GetValue(video) as string;
-
-                                            if (string.Equals(vidId, id, StringComparison.OrdinalIgnoreCase))
-                                            {
-                                                _logger.LogInformation("⚪ [Cavea.SearchMetadata] Found episode '{Id}' in Series Videos list.", id);
-                                                finalResult = video;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ---------------------------------------------------------
-                // STRATEGY 3: Standard GetMetaAsync (Movies or Series)
-                // ---------------------------------------------------------
-                if (finalResult == null && !id.Contains(":")) 
-                {
-                    var getMetaMethod = stremioProvider.GetType().GetMethods()
-                        .FirstOrDefault(m => m.Name == "GetMetaAsync" && m.GetParameters().Length == 2);
-                    
-                    if (getMetaMethod != null)
-                    {
-                        var paramType = getMetaMethod.GetParameters()[1].ParameterType;
-                        var mediaTypeEnumValue = Enum.ToObject(paramType, mediaTypeEnum);
-
-                        var task = getMetaMethod.Invoke(stremioProvider, new object[] { id, mediaTypeEnumValue }) as Task;
-                        if (task != null)
-                        {
-                            await task.ConfigureAwait(false);
-                            finalResult = task.GetType().GetProperty("Result")?.GetValue(task);
-                        }
-                    }
-                }
-
-                return finalResult;
+                return result;
             }
             catch (Exception ex)
             {

@@ -158,23 +158,27 @@
 
     async function getTMDBData(tmdbId, imdbId, itemType, title, year) {
         try {
-            const params = new URLSearchParams();
-            if (tmdbId) params.append('tmdbId', tmdbId);
-            if (imdbId) params.append('imdbId', imdbId);
-            if (itemType) params.append('itemType', itemType);
-            if (title) params.append('title', title);
-            if (year) params.append('year', year);
-            params.append('includeCredits', 'false');
-            params.append('includeReviews', 'false');
+            if (!tmdbId) {
+                console.warn('[DetailsModal.getTMDBData] No TMDB ID provided. Cannot use new endpoints.');
+                return null;
+            }
 
-            const url = window.ApiClient.getUrl('api/cavea/metadata/search') + '?' + params.toString();
+            // Map itemType to endpoint
+            let endpoint = '';
+            if (itemType === 'movie') endpoint = 'movie';
+            else if (itemType === 'series' || itemType === 'tv') endpoint = 'series';
+            else return null; // Episode support not fully integrated in modal yet
+
+            const url = window.ApiClient.getUrl(`api/cavea/tmdb/${endpoint}/${tmdbId}`);
+
+            console.log('[DetailsModal.getTMDBData] Fetching from new endpoint:', url);
             const response = await window.ApiClient.ajax({
                 type: 'GET',
                 url: url,
                 dataType: 'json'
             });
 
-            return response?.main || response;
+            return response;
         } catch (e) {
             console.error('[DetailsModal.getTMDBData] Error:', e);
             return null;
@@ -821,7 +825,19 @@
             const displayTitle = tmdbData.title || tmdbData.name;
             if (displayTitle) qs('#item-detail-title', modal).textContent = displayTitle;
             if (tmdbData.overview) qs('#item-detail-overview', modal).textContent = tmdbData.overview;
-            if (tmdbData.poster_path) setBackgroundImage(qs('#item-detail-image', modal), 'https://image.tmdb.org/t/p/w500' + tmdbData.poster_path);
+            if (tmdbData.overview) qs('#item-detail-overview', modal).textContent = tmdbData.overview;
+
+            // Image handling with fallback support
+            if (tmdbData.poster_path) {
+                let posterUrl = tmdbData.poster_path;
+                if (!posterUrl.startsWith('http') && !posterUrl.startsWith('/')) {
+                    posterUrl = 'https://image.tmdb.org/t/p/w500' + posterUrl;
+                } else if (posterUrl.startsWith('/')) {
+                    // Local fallback path - ensure absolute URL if needed by CSS
+                    posterUrl = window.ApiClient.getUrl(posterUrl);
+                }
+                setBackgroundImage(qs('#item-detail-image', modal), posterUrl);
+            }
 
             // Detect type from response (name=TV, title=movie)
             const actualType = (tmdbData.name && !tmdbData.title) ? 'series' :
@@ -863,9 +879,12 @@
             modal.dataset.tmdbId = tmdbIdFromResponse || '';
             modal.dataset.itemType = actualType;
 
-            const { credits, reviews } = await fetchTMDBCreditsAndReviews(actualType === 'series' ? 'tv' : 'movie', tmdbData.id);
+            // Using included credits/reviews from main response
+            const credits = tmdbData.credits;
+            const reviews = tmdbData.reviews ? tmdbData.reviews.results : [];
+
             if (credits) populateCredits(modal, tmdbData, credits);
-            if (reviews.length > 0) {
+            if (reviews && reviews.length > 0) {
                 populateReviews(modal, reviews);
                 await populateStreams(modal);
             }
@@ -1218,11 +1237,23 @@
                 }
 
                 if (tmdbData.overview) qs('#item-detail-overview', modal).textContent = tmdbData.overview;
-                if (tmdbData.poster_path) setBackgroundImage(qs('#item-detail-image', modal), 'https://image.tmdb.org/t/p/w500' + tmdbData.poster_path);
+                // Image handling with fallback support
+                if (tmdbData.poster_path) {
+                    let posterUrl = tmdbData.poster_path;
+                    if (!posterUrl.startsWith('http') && !posterUrl.startsWith('/')) {
+                        posterUrl = 'https://image.tmdb.org/t/p/w500' + posterUrl;
+                    } else if (posterUrl.startsWith('/')) {
+                        posterUrl = window.ApiClient.getUrl(posterUrl);
+                    }
+                    setBackgroundImage(qs('#item-detail-image', modal), posterUrl);
+                }
 
-                const { credits, reviews } = await fetchTMDBCreditsAndReviews(item.itemType === 'series' ? 'tv' : 'movie', tmdbData.id);
+                // Using included credits/reviews from main response
+                const credits = tmdbData.credits;
+                const reviews = tmdbData.reviews ? tmdbData.reviews.results : [];
+
                 if (credits) populateCredits(modal, tmdbData, credits);
-                if (reviews?.length > 0) {
+                if (reviews && reviews.length > 0) {
                     populateReviews(modal, reviews);
                     await populateStreams(modal);
                 }
