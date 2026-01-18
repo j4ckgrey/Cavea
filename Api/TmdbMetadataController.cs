@@ -165,16 +165,16 @@ namespace Cavea.Api
                 // We return a specialized local path indicator or absolute URL?
                 // Frontend uses: `https://image.tmdb.org/t/p/w...${path}` or just assumes it's a path.
                 // We need to trick frontend or support local.
-                // Use a marker? "/jellyfin/Items/{Id}/Images/Primary"
+                // Use a marker? "/Items/{Id}/Images/Primary"
                 // The frontend will likely prepend TMDB url.
                 // We will handle this in frontend logic.
-                poster = $"/Client/Items/{item.Id}/Images/Primary";
+                poster = $"/Items/{item.Id}/Images/Primary";
             }
 
             string? backdrop = null;
             if (item.HasImage(ImageType.Backdrop))
             {
-                backdrop = $"/Client/Items/{item.Id}/Images/Backdrop/0";
+                backdrop = $"/Items/{item.Id}/Images/Backdrop/0";
             }
 
             return new 
@@ -195,7 +195,7 @@ namespace Cavea.Api
                     cast = _libraryManager.GetPeople(item).Select(p => new {
                         name = p.Name,
                         character = p.Role,
-                        profile_path = $"/Client/Items/{p.Id}/Images/Primary" // Hacky for people?
+                        profile_path = $"/Items/{p.Id}/Images/Primary" // Hacky for people?
                     }).Take(10)
                 }
             };

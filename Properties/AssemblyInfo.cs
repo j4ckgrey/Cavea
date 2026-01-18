@@ -1,6 +1,6 @@
 using System.Reflection;
 
-[assembly: AssemblyVersion("0.1.1.10")]
-[assembly: AssemblyFileVersion("0.1.1.10")]
+[assembly: AssemblyVersion("0.1.1.11")]
+[assembly: AssemblyFileVersion("0.1.1.11")]
 [assembly: AssemblyProduct("Cavea")]
 [assembly: AssemblyCompany("j4ckgrey")]

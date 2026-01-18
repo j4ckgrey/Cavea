@@ -172,6 +172,9 @@ namespace Cavea.Api
                          var backProp = FindProp(new[] { "Background", "Backdrop", "BackdropImage", "Banner" });
                          mapped["background"] = backProp?.GetString();
 
+                         var posterProp = FindProp(new[] { "Poster", "PosterImage", "Cover" });
+                         mapped["poster"] = posterProp?.GetString();
+
                          var logoProp = FindProp(new[] { "Logo", "LogoImage" });
                          mapped["logo"] = logoProp?.GetString();
 
