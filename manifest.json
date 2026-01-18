@@ -9,22 +9,13 @@
     "imageUrl": "https://raw.githubusercontent.com/j4ckgrey/Cavea/main/Cavea.png",
     "versions": [
       {
-        "version": "0.1.1.11",
-        "changelog": "Refactored metadata endpoints to match Baklava behavior (search-based), fixed image paths, and improved fallback logic for robust metadata fetching.",
+        "version": "0.2.0.0",
+        "changelog": "optimized metadata fetching for search results and clean database",
         "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/j4ckgrey/Cavea/releases/download/v0.1.1.11/Cavea_0.1.1.11.zip",
-        "checksum": "08d03d0bcd25b90bc105d2466d1a8956",
+        "sourceUrl": "https://github.com/j4ckgrey/Cavea/releases/download/v0.2.0.0/Cavea_0.2.0.0.zip",
+        "checksum": "4fee7e7eee552f4b51358f740b800aea",
         "checksumType": "md5",
-        "timestamp": "2026-01-18T03:00:00Z"
-      },
-      {
-        "version": "0.1.1.10",
-        "changelog": "Implemented TMDB Metadata endpoints with backend caching and client-side fallback/enrichment logic.",
-        "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/j4ckgrey/Cavea/releases/download/v0.1.1.10/Cavea_0.1.1.10.zip",
-        "checksum": "de447fd2aee94e662241691d1a16f813",
-        "checksumType": "md5",
-        "timestamp": "2026-01-18T02:46:52Z"
+        "timestamp": "2026-01-18T14:22:00Z"
       },
       {
         "version": "0.1.1.8",
