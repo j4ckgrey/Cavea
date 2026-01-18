@@ -1,6 +1,6 @@
 [
   {
-    "guid": "109470b0-d97c-4540-89b7-856d4e5831c7",
+    "guid": "c22fce89-07eb-4a6a-b63e-ee9cdc9c2f47",
     "name": "Cavea",
     "description": "Media request management with admin approval workflow and enhanced search capabilities",
     "overview": "Adds media request system with user submissions and admin approval, smart search toggle between local and global sources, automatic TV client local search enforcement, and seamless Gelato integration for external content discovery",
@@ -13,7 +13,7 @@
         "changelog": "Cleaned up metadata endpoints: removed TMDB API key dependency, switched modals to use direct Gelato/Stremio proxy. Cached endpoints confirmed for episodes and reviews.",
         "targetAbi": "10.11.0.0",
         "sourceUrl": "https://github.com/j4ckgrey/Cavea/releases/download/v0.1.1.6/Cavea_0.1.1.6.zip",
-        "checksum": "894a179af4591c188b0a8d69f9e2e055",
+        "checksum": "e8e16a82596effaa80fde0eaa646261b",
         "checksumType": "md5",
         "timestamp": "2026-01-18T00:00:00Z"
       },

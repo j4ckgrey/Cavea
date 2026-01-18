@@ -35,7 +35,7 @@ namespace Cavea
         public override string Name => "Cavea";
 
         // Unique plugin GUID.
-        public override Guid Id => Guid.Parse("109470b0-d97c-4540-89b7-856d4e5831c7");
+        public override Guid Id => Guid.Parse("c22fce89-07eb-4a6a-b63e-ee9cdc9c2f47");
 
         // Provide the embedded HTML config page as a plugin page
         public IEnumerable<PluginPageInfo> GetPages()
