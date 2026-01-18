@@ -9,6 +9,15 @@
     "imageUrl": "https://raw.githubusercontent.com/j4ckgrey/Cavea/main/Cavea.png",
     "versions": [
       {
+        "version": "0.1.1.9",
+        "changelog": "Fix episode metadata retrieval using Gelato SearchAsync fallback.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/j4ckgrey/Cavea/releases/download/v0.1.1.9/Cavea_0.1.1.9.zip",
+        "checksum": "23c5afc18b8b4713f3ba8458d167fb92",
+        "checksumType": "md5",
+        "timestamp": "2026-01-18T00:00:00Z"
+      },
+      {
         "version": "0.1.1.8",
         "changelog": "Hotfix: Removed native runtime dependencies to fix BadImageFormatException on non-x64 systems (e.g., ARM, Windows).",
         "targetAbi": "10.11.0.0",

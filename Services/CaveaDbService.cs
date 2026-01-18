@@ -1727,6 +1727,50 @@ namespace Cavea.Services
             _connection?.Close();
             _connection?.Dispose();
         }
+        public async Task<CompleteItemMetadata?> GetCompleteItemMetadataByTitleAsync(string title, int? year, string? itemType)
+        {
+            try
+            {
+                EnsureConnection();
+
+                var query = @"
+                    SELECT ItemId 
+                    FROM ItemMetadata 
+                    WHERE Name LIKE @title
+                ";
+                
+                if (year.HasValue)
+                {
+                    query += " AND (Year = @year OR Year = @year - 1 OR Year = @year + 1)"; 
+                }
+
+                if (!string.IsNullOrEmpty(itemType))
+                {
+                    query += " AND ItemType = @itemType";
+                }
+
+                query += " ORDER BY CASE WHEN Name = @exactName THEN 0 ELSE 1 END, Year DESC LIMIT 1";
+
+                using var cmd = _connection!.CreateCommand();
+                cmd.CommandText = query;
+                cmd.Parameters.AddWithValue("@title", title);
+                cmd.Parameters.AddWithValue("@exactName", title);
+                if (year.HasValue) cmd.Parameters.AddWithValue("@year", year.Value);
+                if (!string.IsNullOrEmpty(itemType)) cmd.Parameters.AddWithValue("@itemType", itemType);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                     return await GetCompleteItemMetadataAsync(reader.GetString(0));
+                }
+            }
+             catch (Exception ex)
+            {
+                _logger.LogError(ex, "⚪ [CaveaDb] Failed to get metadata by title {Title}", title);
+            }
+            return null;
+        }
+
     }
 
     /// <summary>
