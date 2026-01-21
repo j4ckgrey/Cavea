@@ -73,7 +73,7 @@ namespace Cavea
         // Delay between series imports (in milliseconds) to prevent rate limiting
         // When importing series, each series triggers episode imports which can cause rate limits
         // Default: 2000ms (2 seconds) between each series
-        public int SeriesImportDelayMs { get; set; } = 2000;
+        public int SeriesImportDelayMs { get; set; } = 3500;
         
         // Maximum parallel imports for movies (series are always sequential to prevent rate limiting)
         // Default: 2 (reduced from 4 to be more conservative)

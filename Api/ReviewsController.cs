@@ -362,6 +362,18 @@ namespace Cavea.Api
                 // Transform IMDb8 v2 response to TMDB-like format
                 var reviews = new List<object>();
                 
+                // Extract aggregate rating from data.title.ratingsSummary.aggregateRating
+                double? aggregateRating = null;
+                if (root.TryGetProperty("data", out var dataRoot) &&
+                    dataRoot.TryGetProperty("title", out var titleRoot) &&
+                    titleRoot.TryGetProperty("ratingsSummary", out var ratingsSummary) &&
+                    ratingsSummary.TryGetProperty("aggregateRating", out var aggRating) &&
+                    aggRating.ValueKind == JsonValueKind.Number)
+                {
+                    aggregateRating = aggRating.GetDouble();
+                    _logger.LogInformation("[ReviewsController] IMDb aggregateRating for {ImdbId}: {Rating}", imdbId, aggregateRating);
+                }
+                
                 // Navigate to data.title.featuredReviews.edges
                 if (root.TryGetProperty("data", out var data) &&
                     data.TryGetProperty("title", out var title) &&
@@ -455,7 +467,8 @@ namespace Cavea.Api
                 
                 _logger.LogInformation("[ReviewsController] Fetched {Count} IMDb reviews for {ImdbId} (v2 API)", reviews.Count, imdbId);
                 
-                var reviewsJson = JsonSerializer.Serialize(new { results = reviews });
+                // Include aggregateRating in the response alongside results
+                var reviewsJson = JsonSerializer.Serialize(new { results = reviews, aggregateRating = aggregateRating });
                 return JsonDocument.Parse(reviewsJson);
             }
             catch (Exception ex)

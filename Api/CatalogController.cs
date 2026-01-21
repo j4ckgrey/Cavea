@@ -613,21 +613,37 @@ namespace Cavea.Api
                     }).ConfigureAwait(false);
                 }
 
-                // 5. Add ALL items to collection in ONE batch call
+                // 5. Add ALL items to collection in ONE batch call with retry logic
                 var distinctIds = itemsToAdd.Distinct().ToList();
                 if (distinctIds.Count > 0)
                 {
-                    // Delay slightly to ensure file system acts up less?
-                    await Task.Delay(1000).ConfigureAwait(false);
+                    // Longer delay to ensure all metadata writes are complete
+                    await Task.Delay(2000).ConfigureAwait(false);
 
-                    try
+                    // Retry logic with exponential backoff for file lock issues
+                    var maxRetries = 3;
+                    var retryDelay = 2000; // Start with 2 seconds
+                    
+                    for (int attempt = 1; attempt <= maxRetries; attempt++)
                     {
-                        await _collectionManager.AddToCollectionAsync(collection.Id, distinctIds).ConfigureAwait(false);
-                        _logger.LogInformation("⚪ [catalogcontroller] Added {Count} items to collection '{Name}' in one batch", distinctIds.Count, collectionName);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "⚪ [catalogcontroller] Failed to add items to collection");
+                        try
+                        {
+                            await _collectionManager.AddToCollectionAsync(collection.Id, distinctIds).ConfigureAwait(false);
+                            _logger.LogInformation("⚪ [catalogcontroller] Added {Count} items to collection '{Name}' in one batch", distinctIds.Count, collectionName);
+                            break; // Success, exit retry loop
+                        }
+                        catch (System.IO.IOException ioEx) when (attempt < maxRetries)
+                        {
+                            _logger.LogWarning("⚪ [catalogcontroller] File lock error on attempt {Attempt}/{MaxRetries}, retrying in {Delay}ms: {Message}", 
+                                attempt, maxRetries, retryDelay, ioEx.Message);
+                            await Task.Delay(retryDelay).ConfigureAwait(false);
+                            retryDelay *= 2; // Exponential backoff
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "⚪ [catalogcontroller] Failed to add items to collection after {Attempt} attempts", attempt);
+                            break;
+                        }
                     }
                 }
 
