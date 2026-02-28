@@ -47,7 +47,7 @@ namespace Cavea.Api
                     versionUi = cfg.VersionUi,
                     audioUi = cfg.AudioUi,
                     subtitleUi = cfg.SubtitleUi,
-                    enableExternalSubtitles = cfg.EnableExternalSubtitles,
+
                     enableCaveaUI = cfg.EnableCaveaUI,
                     useCaveaCache = cfg.UseCaveaCache,
                     useCaveaStaging = cfg.UseCaveaStaging,
@@ -155,11 +155,7 @@ namespace Cavea.Api
                 _logger.LogInformation("[ConfigController] EnableCaveaUI updated to: {Value}", cfg.EnableCaveaUI);
             }
 
-            if (dto.enableExternalSubtitles.HasValue)
-            {
-                cfg.EnableExternalSubtitles = dto.enableExternalSubtitles.Value;
-            }
-            
+
             if (dto.useCaveaCache.HasValue)
             {
                 cfg.UseCaveaCache = dto.useCaveaCache.Value;
@@ -200,7 +196,7 @@ namespace Cavea.Api
         public string versionUi { get; set; }
         public string audioUi { get; set; }
         public string subtitleUi { get; set; }
-        public bool? enableExternalSubtitles { get; set; }
+
         public bool? enableCaveaUI { get; set; }
         public bool? useCaveaCache { get; set; }
         public bool? useCaveaStaging { get; set; }

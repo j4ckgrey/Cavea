@@ -8,13 +8,19 @@
          Leaving these out ensures the server's runtime assemblies are used
          and avoids strong-name / public-key mismatches when loading the plugin. -->
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
+    <RuntimeIdentifier></RuntimeIdentifier>
+    <Version>0.2.0.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Exclude Gelato folder from build -->
+    <!-- Exclude Gelato and Baklava folder from build -->
     <Compile Remove="Gelato/**" />
     <EmbeddedResource Remove="Gelato/**" />
     <None Remove="Gelato/**" />
+    <Compile Remove="Baklava/**" />
+    <EmbeddedResource Remove="Baklava/**" />
+    <None Remove="Baklava/**" />
   </ItemGroup>
 
   <ItemGroup>

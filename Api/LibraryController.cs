@@ -40,6 +40,10 @@ namespace Cavea.Api
             [FromQuery] string itemType,
             [FromQuery] string? jellyfinId)
         {
+            // Robust ID handling: strip prefixes
+            if (tmdbId != null && tmdbId.StartsWith("tmdb:")) tmdbId = tmdbId.Substring(5);
+            if (imdbId != null && imdbId.StartsWith("imdb:")) imdbId = imdbId.Substring(5);
+
             _logger.LogInformation("⚪ [Cavea.Library] CheckLibraryStatus: imdbId={ImdbId}, tmdbId={TmdbId}, itemType={ItemType}, jellyfinId={JellyfinId}",
                 imdbId ?? "null", tmdbId ?? "null", itemType ?? "null", jellyfinId ?? "null");
             
@@ -50,40 +54,67 @@ namespace Cavea.Api
                     return BadRequest(new { error = "Either imdbId, tmdbId, or jellyfinId is required" });
                 }
 
-                var inLibrary = false;
+                var inLibraryResult = false;
                 string? foundImdbId = imdbId;
                 string? foundTmdbId = tmdbId;
                 
+                string? discoveredType = null;
+
                 try
                 {
                     // Fast path: Check by Jellyfin ID
-                    if (!string.IsNullOrEmpty(jellyfinId) && Guid.TryParse(jellyfinId, out var jfGuid))
+                    if (!string.IsNullOrEmpty(jellyfinId))
                     {
-                        var itemById = _libraryManager.GetItemById(jfGuid);
+                        BaseItem? itemById = null;
+                        if (Guid.TryParse(jellyfinId, out var jfGuid))
+                        {
+                            itemById = _libraryManager.GetItemById(jfGuid);
+                        }
+                        
+                        // Try hyphenless format if not found (32 hex chars)
+                        if (itemById == null && jellyfinId.Length == 32 && !jellyfinId.Contains("-"))
+                        {
+                            var withHyphens = $"{jellyfinId.Substring(0, 8)}-{jellyfinId.Substring(8, 4)}-{jellyfinId.Substring(12, 4)}-{jellyfinId.Substring(16, 4)}-{jellyfinId.Substring(20)}";
+                            if (Guid.TryParse(withHyphens, out var hyphenatedGuid))
+                            {
+                                itemById = _libraryManager.GetItemById(hyphenatedGuid);
+                            }
+                        }
+
                         if (itemById != null)
                         {
-                            var itemTypeName = itemById.GetType().Name;
-                            if ((itemType == "series" && itemTypeName == "Series") || (itemType == "movie" && itemTypeName == "Movie") || string.IsNullOrEmpty(itemType))
+                            _logger.LogInformation("⚪ [Cavea.Library] Library item found: {Name} (ID: {Id})", itemById.Name, jellyfinId);
+                            var jfType = itemById.GetType().Name;
+                            discoveredType = jfType == "Movie" ? "movie" : (jfType == "Series" ? "series" : null);
+
+                            if ((itemType == "series" && jfType == "Series") || (itemType == "movie" && jfType == "Movie") || string.IsNullOrEmpty(itemType))
                             {
-                                inLibrary = true;
+                                inLibraryResult = true;
                                 if (itemById.ProviderIds != null)
                                 {
                                     itemById.ProviderIds.TryGetValue("Imdb", out foundImdbId);
                                     itemById.ProviderIds.TryGetValue("Tmdb", out foundTmdbId);
+                                    _logger.LogInformation("⚪ [Cavea.Library] Got provider IDs from Jellyfin item: imdbId={ImdbId}, tmdbId={TmdbId}, itemType={ItemType}", 
+                                        foundImdbId ?? "null", foundTmdbId ?? "null", itemType ?? "null");
                                 }
                             }
+                        }
+                        else
+                        {
+                             _logger.LogInformation("⚪ [Cavea.Library] No library item found by ID: {Id}", jellyfinId);
                         }
                     }
 
                     // Slow path: Search library by Provider ID
-                    if (!inLibrary && (!string.IsNullOrEmpty(imdbId) || !string.IsNullOrEmpty(tmdbId)))
+                    if (!inLibraryResult && (!string.IsNullOrEmpty(imdbId) || !string.IsNullOrEmpty(tmdbId)))
                     {
+                        _logger.LogInformation("⚪ [Cavea.Library] Searching library by Provider IDs (imdb={Imdb}, tmdb={Tmdb}, typeFilter={Type})", imdbId ?? "null", tmdbId ?? "null", itemType ?? "none");
+                        
                         var query = new InternalItemsQuery { Recursive = true };
                         if (itemType == "series") query.IncludeItemTypes = new[] { BaseItemKind.Series };
                         else if (itemType == "movie") query.IncludeItemTypes = new[] { BaseItemKind.Movie };
 
-                        var allItems = _libraryManager.GetItemList(query);
-                        var foundItem = allItems.FirstOrDefault(item =>
+                        var foundItem = _libraryManager.GetItemList(query).FirstOrDefault(item =>
                         {
                             var providerIds = item.ProviderIds;
                             if (providerIds == null) return false;
@@ -92,9 +123,28 @@ namespace Cavea.Api
                             return false;
                         });
 
+                        // FALLBACK: If not found with type filter, try without type filter
+                        if (foundItem == null && !string.IsNullOrEmpty(itemType))
+                        {
+                            _logger.LogInformation("⚪ [Cavea.Library] Not found with {Type} filter, trying type-agnostic search", itemType);
+                            var agnosticQuery = new InternalItemsQuery { Recursive = true, IncludeItemTypes = new[] { BaseItemKind.Movie, BaseItemKind.Series } };
+                            foundItem = _libraryManager.GetItemList(agnosticQuery).FirstOrDefault(item =>
+                            {
+                                var providerIds = item.ProviderIds;
+                                if (providerIds == null) return false;
+                                if (imdbId != null && providerIds.TryGetValue("Imdb", out var itemImdb) && itemImdb == imdbId) return true;
+                                if (tmdbId != null && providerIds.TryGetValue("Tmdb", out var itemTmdb) && itemTmdb == tmdbId) return true;
+                                return false;
+                            });
+                        }
+
                         if (foundItem != null)
                         {
-                            inLibrary = true;
+                            _logger.LogInformation("⚪ [Cavea.Library] Found item in library: {Name} ({Type})", foundItem.Name, foundItem.GetType().Name);
+                            inLibraryResult = true;
+                            var jfType = foundItem.GetType().Name;
+                            discoveredType = jfType == "Movie" ? "movie" : (jfType == "Series" ? "series" : null);
+
                             if (foundItem.ProviderIds != null)
                             {
                                 if (string.IsNullOrEmpty(foundImdbId)) foundItem.ProviderIds.TryGetValue("Imdb", out foundImdbId);
@@ -112,11 +162,11 @@ namespace Cavea.Api
                 var requests = config?.Requests ?? new List<MediaRequest>();
                 
                 var existingRequest = requests.FirstOrDefault(r =>
-                    r.ItemType == itemType &&
+                    (r.ItemType == itemType || r.ItemType == discoveredType) &&
                     (
                         ((foundImdbId != null && !string.IsNullOrEmpty(r.ImdbId) && r.ImdbId == foundImdbId) || 
                          (foundTmdbId != null && !string.IsNullOrEmpty(r.TmdbId) && r.TmdbId == foundTmdbId)) ||
-                        (inLibrary && !string.IsNullOrEmpty(jellyfinId) && !string.IsNullOrEmpty(r.JellyfinId) && r.JellyfinId == jellyfinId)
+                        (inLibraryResult && !string.IsNullOrEmpty(jellyfinId) && !string.IsNullOrEmpty(r.JellyfinId) && r.JellyfinId == jellyfinId)
                     )
                 );
 
@@ -135,9 +185,11 @@ namespace Cavea.Api
                     }
                 }
 
+
                 return Ok(new
                 {
-                    inLibrary,
+                    inLibrary = inLibraryResult,
+                    itemType = discoveredType,
                     existingRequest = existingRequest != null ? new
                     {
                         id = existingRequest.Id,

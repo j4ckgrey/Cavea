@@ -379,8 +379,6 @@ namespace Cavea.Api
                     if (webCompat == 1)
                     {
                         var probedStreams = await _dbService.GetProbedStreamsAsync(itemId, stream.StremioId);
-                        var externalSubs = new List<object>(); // No longer cached
-
                         compatibleStreams.Add(new
                         {
                             Id = stream.Id,
@@ -400,8 +398,7 @@ namespace Cavea.Api
                                 ps.Channels,
                                 ps.SampleRate,
                                 ps.BitRate
-                            }),
-                            ExternalSubtitles = externalSubs
+                            })
                         });
                     }
                 }

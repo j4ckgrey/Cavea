@@ -18,7 +18,7 @@ namespace Cavea
         public string TmdbApiKey { get; set; } = string.Empty;
 
         // External Subtitles
-        public bool EnableExternalSubtitles { get; set; } = false;
+
 
         // Gelato integration settings (server-side proxy)
         // Set GelatoBaseUrl to the base URL where Gelato is reachable from the Jellyfin server

@@ -187,7 +187,8 @@
         try {
             const params = new URLSearchParams();
             params.append('tmdbId', movieId);
-            params.append('itemType', mediaType === 'tv' ? 'series' : 'movie');
+            // Normalize: backend expects 'series' or 'movie'
+            params.append('itemType', (mediaType === 'tv' || mediaType === 'series') ? 'series' : 'movie');
             params.append('includeCredits', 'true');
             params.append('includeReviews', 'true');
 
@@ -820,51 +821,73 @@
             qs('#item-detail-info', modal).innerHTML = infoHtml;
 
             // Detect type from response
-            const actualType = (data.name && !data.title) ? 'series' :
+            let actualType = (data.name && !data.title) ? 'series' :
                 (data.title && !data.name) ? 'movie' :
                     (data.number_of_seasons) ? 'series' : itemType;
 
 
-            // Store IDs on modal for later use
-            modal.dataset.imdbId = imdbIdFromData || '';
-            modal.dataset.tmdbId = data.id || '';
+            // Detect IDs from response
+            const imdbIdFromResponse = data.imdb_id || (data.id && data.id.startsWith('tt') ? data.id : null);
+            const tmdbIdFromResponse = data.tmdb_id || (data.id && data.id.startsWith('tmdb:') ? data.id.split(':')[1] : (data.id && !data.id.startsWith('tt') ? data.id : null));
+
+            // Store tentative IDs on modal
+            modal.dataset.imdbId = imdbIdFromResponse || '';
+            modal.dataset.tmdbId = tmdbIdFromResponse || '';
             modal.dataset.itemType = actualType;
 
-            // Fetch external IDs if we have a TMDB ID but no IMDB ID
-            let imdbIdFromResponse = imdbIdFromData;
-            const tmdbIdFromResponse = data.id;
+            let finalImdbId = imdbIdFromResponse;
 
-            if (!imdbIdFromResponse && tmdbIdFromResponse) {
-                try {
+            // Robust Type & ID Verification
+            try {
+                // 1. Check Library Status FIRST - it's the ultimate truth for items we own
+                if (window.LibraryStatus?.checkStatus) {
+                    const status = await window.LibraryStatus.checkStatus(imdbIdFromResponse, tmdbIdFromResponse, actualType, modal.dataset.itemId || null);
+                    if (status.inLibrary && status.itemType) {
+                        console.log('[DetailsModal] Library verified type:', status.itemType);
+                        actualType = status.itemType;
+                        modal.dataset.itemType = actualType;
+                    }
+                    modal.dataset.inLibrary = status.inLibrary ? 'true' : 'false';
+                }
+
+                // 2. If not in library or even if it is, if we have an IMDB ID, we can get EXTERNAL verification from TMDB
+                // This fixes the "Wrong Cast" by ensuring we know if it's a movie or tv show
+                const verificationImdbId = finalImdbId || imdbId;
+                if (verificationImdbId) {
                     const params = new URLSearchParams();
-                    params.append('tmdbId', tmdbIdFromResponse);
-                    params.append('mediaType', actualType === 'series' ? 'tv' : 'movie');
-
+                    params.append('imdbId', verificationImdbId);
                     const url = window.ApiClient.getUrl('api/cavea/metadata/external-ids') + '?' + params.toString();
                     const externalData = await window.ApiClient.ajax({ type: 'GET', url: url, dataType: 'json' });
 
-
-                    if (externalData?.imdb_id) {
-                        imdbIdFromResponse = externalData.imdb_id;
+                    if (externalData?.media_type) {
+                        const verifiedType = externalData.media_type === 'tv' ? 'series' : 'movie';
+                        if (actualType !== verifiedType) {
+                            console.log(`[DetailsModal] Correcting media type from ${actualType} to ${verifiedType}`);
+                            actualType = verifiedType;
+                            modal.dataset.itemType = actualType;
+                        }
                     }
-                } catch (err) {
-                    console.warn('[DetailsModal] Could not fetch external IDs:', err);
+                    if (externalData?.id && !tmdbIdFromResponse) {
+                        modal.dataset.tmdbId = externalData.id;
+                    }
+                }
+            } catch (err) {
+                console.warn('[DetailsModal] Robust verification failed:', err);
+            }
+
+            // Now fetch credits with the VERIFIED actualType
+            if (data.credits) {
+                populateCredits(modal, data, data.credits);
+            } else {
+                const effectiveTmdbId = modal.dataset.tmdbId || tmdbIdFromResponse;
+                if (effectiveTmdbId) {
+                    const { credits } = await fetchTMDBCreditsAndReviews(actualType, effectiveTmdbId);
+                    if (credits) populateCredits(modal, data, credits);
                 }
             }
 
-            modal.dataset.imdbId = imdbIdFromResponse || '';
-            modal.dataset.tmdbId = tmdbIdFromResponse || '';
-
-            // Use credits from response if available, otherwise fetch separately
-            if (data.credits) {
-                populateCredits(modal, data, data.credits);
-            } else if (data.id) {
-                const { credits } = await fetchTMDBCreditsAndReviews(actualType === 'series' ? 'tv' : 'movie', data.id);
-                if (credits) populateCredits(modal, data, credits);
-            }
-
             if (window.LibraryStatus?.check) {
-                const existingRequest = await window.LibraryStatus.checkRequest(imdbIdFromResponse, tmdbIdFromResponse, actualType, modal.dataset.itemId || null);
+                const existingRequest = await window.LibraryStatus.checkRequest(finalImdbId, tmdbIdFromResponse, actualType, modal.dataset.itemId || null);
 
                 if (existingRequest) {
 
@@ -920,7 +943,7 @@
 
 
                     // Check if item is in library
-                    const inLibrary = await window.LibraryStatus.check(imdbIdFromResponse, tmdbIdFromResponse, actualType, modal.dataset.itemId || null);
+                    const inLibrary = modal.dataset.inLibrary === 'true';
 
                     if (inLibrary) {
                         // Item is in library - just show Open button
@@ -1005,7 +1028,7 @@
                 }
 
                 // No existing request - check library status
-                const inLibrary = await window.LibraryStatus.check(imdbIdFromResponse, tmdbIdFromResponse, actualType, modal.dataset.itemId || null);
+                const inLibrary = modal.dataset.inLibrary === 'true';
                 const importBtn = qs('#item-detail-import', modal);
                 const requestBtn = qs('#item-detail-request', modal);
                 const openBtn = qs('#item-detail-open', modal);

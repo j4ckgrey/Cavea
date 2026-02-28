@@ -180,86 +180,15 @@ namespace Cavea.Api
             }
 
             // If approving and ApprovedBy is provided and the approver is different
-            // from the original requester, create an admin-owned approved copy.
-            // Same logic for rejected - create admin-owned rejected copy.
-            try
+            // from the original requester, log it, but do not create an admin-owned
+            // separate copy to keep requests unified in the DB.
+            if (!string.IsNullOrEmpty(update.Status) && 
+                (update.Status.Equals("approved", StringComparison.OrdinalIgnoreCase) || 
+                 update.Status.Equals("rejected", StringComparison.OrdinalIgnoreCase)) &&
+                !string.IsNullOrEmpty(update.ApprovedBy) && 
+                !string.Equals(update.ApprovedBy, request.Username, StringComparison.OrdinalIgnoreCase))
             {
-                if (!string.IsNullOrEmpty(update.Status) && update.Status.Equals("approved", StringComparison.OrdinalIgnoreCase)
-                    && !string.IsNullOrEmpty(update.ApprovedBy) && !string.Equals(update.ApprovedBy, request.Username, StringComparison.OrdinalIgnoreCase))
-                {
-                    var cfg = Plugin.Instance?.Configuration;
-
-                    // Avoid creating duplicate admin-approved entries for the same approver + tmdb
-                    var existingAdminCopy = cfg?.Requests?.FirstOrDefault(r =>
-                        r.Username == update.ApprovedBy &&
-                        r.TmdbId == request.TmdbId &&
-                        r.Status != null && r.Status.Equals("approved", StringComparison.OrdinalIgnoreCase)
-                    );
-
-                    if (existingAdminCopy == null)
-                    {
-                        var adminCopy = new MediaRequest
-                        {
-                            Id = $"{update.ApprovedBy}_{request.TmdbId}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
-                            Username = update.ApprovedBy,
-                            UserId = string.Empty,
-                            Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                            Title = request.Title,
-                            Year = request.Year,
-                            Img = request.Img,
-                            ImdbId = request.ImdbId,
-                            TmdbId = request.TmdbId,
-                            JellyfinId = request.JellyfinId,
-                            ItemType = request.ItemType,
-                            TmdbMediaType = request.TmdbMediaType,
-                            Status = "approved",
-                            ApprovedBy = update.ApprovedBy
-                        };
-
-                        if (cfg?.Requests == null) cfg.Requests = new List<MediaRequest>();
-                        cfg.Requests.Add(adminCopy);
-                    }
-                }
-                else if (!string.IsNullOrEmpty(update.Status) && update.Status.Equals("rejected", StringComparison.OrdinalIgnoreCase)
-                    && !string.IsNullOrEmpty(update.ApprovedBy) && !string.Equals(update.ApprovedBy, request.Username, StringComparison.OrdinalIgnoreCase))
-                {
-                    var cfg = Plugin.Instance?.Configuration;
-
-                    // Avoid creating duplicate admin-rejected entries for the same rejecter + tmdb
-                    var existingAdminCopy = cfg?.Requests?.FirstOrDefault(r =>
-                        r.Username == update.ApprovedBy &&
-                        r.TmdbId == request.TmdbId &&
-                        r.Status != null && r.Status.Equals("rejected", StringComparison.OrdinalIgnoreCase)
-                    );
-
-                    if (existingAdminCopy == null)
-                    {
-                        var adminCopy = new MediaRequest
-                        {
-                            Id = $"{update.ApprovedBy}_{request.TmdbId}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
-                            Username = update.ApprovedBy,
-                            UserId = string.Empty,
-                            Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                            Title = request.Title,
-                            Year = request.Year,
-                            Img = request.Img,
-                            ImdbId = request.ImdbId,
-                            TmdbId = request.TmdbId,
-                            JellyfinId = request.JellyfinId,
-                            ItemType = request.ItemType,
-                            TmdbMediaType = request.TmdbMediaType,
-                            Status = "rejected",
-                            ApprovedBy = update.ApprovedBy
-                        };
-
-                        if (cfg?.Requests == null) cfg.Requests = new List<MediaRequest>();
-                        cfg.Requests.Add(adminCopy);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[RequestsController] Could not create admin copy for approved request {RequestId}", id);
+                _logger.LogInformation($"[RequestsController] Request {id} status updated to {update.Status} by admin {update.ApprovedBy}");
             }
 
             Plugin.Instance.SaveConfiguration();

@@ -25,7 +25,7 @@ namespace Cavea
             // Register Refactored Services
 
             services.AddSingleton<StreamService>();
-            services.AddSingleton<SubtitleService>();
+
 
             // Register Scheduled Tasks
             services.AddSingleton<MediaBrowser.Model.Tasks.IScheduledTask, Cavea.Tasks.CatalogSyncTask>();

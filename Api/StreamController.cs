@@ -21,20 +21,20 @@ namespace Cavea.Api
     {
         private readonly ILogger<StreamController> _logger;
         private readonly StreamService _streamService;
-        private readonly SubtitleService _subtitleService;
+
         private readonly ILibraryManager _libraryManager;
         private readonly IMediaSourceManager _mediaSourceManager;
 
         public StreamController(
             ILogger<StreamController> logger,
             StreamService streamService,
-            SubtitleService subtitleService,
+
             ILibraryManager libraryManager,
             IMediaSourceManager mediaSourceManager)
         {
             _logger = logger;
             _streamService = streamService;
-            _subtitleService = subtitleService;
+
             _libraryManager = libraryManager;
             _mediaSourceManager = mediaSourceManager;
         }
@@ -98,7 +98,7 @@ namespace Cavea.Api
             List<object> embeddedSubs;
             if (isWebClient)
             {
-                _logger.LogInformation("⚪ [Cavea.Stream] Web client - skipping embedded subtitles (use external or burn-in)");
+                _logger.LogInformation("⚪ [Cavea.Stream] Web client - skipping embedded subtitles (use burn-in)");
                 embeddedSubs = new List<object>();
             }
             else
@@ -119,9 +119,7 @@ namespace Cavea.Api
                 _logger.LogInformation("⚪ [Cavea.Stream] Found {Count} embedded subtitle streams.", embeddedSubs.Count);
             }
 
-            // 4. NO AUTO-FETCH of external subtitles. 
-            // Clients must fetch them manually via /api/cavea/subtitles/fetch if needed.
-            
+
             var allSubs = new List<object>();
             allSubs.Add(new { index = -1, title = (string?)"None", language = (string?)null, codec = (string?)null, isForced = (bool?)false, isDefault = (bool?)false, isExternal = false, url = (string?)null });
             

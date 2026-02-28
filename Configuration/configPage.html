@@ -56,6 +56,50 @@
                                 target="_blank" style="color: #1e90ff;">RapidAPI</a> (free tier available)
                         </p>
                     </div>
+                    <div style="margin-bottom: 16px;">
+                        <label for="reviewSource"
+                            style="display:block;margin-bottom:6px;color:#ddd;font-weight:600;">Review Source</label>
+                        <select id="reviewSource"
+                            style="width:200px;padding:6px;border-radius:4px;border:1px solid #444;background:#111;color:#fff;cursor:pointer;">
+                            <option value="tmdb">TMDB</option>
+                            <option value="trakt">Trakt</option>
+                            <option value="imdb">IMDb (via RapidAPI)</option>
+                        </select>
+                        <p style="margin: 4px 0 0 0; font-size: 11px; color: #888;">
+                            Choose where to fetch reviews from. Ensure the corresponding API key is configured above.
+                        </p>
+
+                        <!-- RapidAPI IMDb Help Section -->
+                        <div
+                            style="margin-top: 12px; padding: 12px; background: rgba(30,144,255,0.1); border-left: 3px solid #1e90ff; border-radius: 4px;">
+                            <p style="margin: 0 0 8px 0; font-size: 12px; color: #1e90ff; font-weight: 600;">📌 About
+                                IMDb Reviews (RapidAPI)</p>
+                            <p style="margin: 0 0 6px 0; font-size: 11px; color: #bbb;">
+                                To use IMDb reviews, you need to subscribe to the <strong>IMDb8 API</strong> on
+                                RapidAPI:
+                            </p>
+                            <ul style="margin: 6px 0 6px 16px; padding: 0; font-size: 11px; color: #bbb;">
+                                <li style="margin-bottom: 4px;">
+                                    <strong>API:</strong> <a href="https://rapidapi.com/apidojo/api/imdb8"
+                                        target="_blank" style="color: #1e90ff;">IMDb8 by ApiDojo</a>
+                                </li>
+                                <li style="margin-bottom: 4px;">
+                                    <strong>Cost:</strong> Free tier (BASIC) - $0.00/month
+                                </li>
+                                <li style="margin-bottom: 4px;">
+                                    <strong>Quota:</strong> Free tier includes sufficient requests for personal use
+                                </li>
+                                <li>
+                                    <strong>Steps:</strong> Visit the link above → Click "Subscribe" → Choose BASIC
+                                    (free) → Use your RapidAPI key above
+                                </li>
+                            </ul>
+                            <p style="margin: 6px 0 0 0; font-size: 10px; color: #999;">
+                                💡 Tip: You can also use Trakt for reviews, which doesn't require subscription (just
+                                OAuth token)
+                            </p>
+                        </div>
+                    </div>
 
                 </div>
 
@@ -72,6 +116,7 @@
                         <p style="margin: 4px 0 0 28px; font-size: 12px; color: #999;">
                             When enabled, all TV clients will only see local library results. This is useful for
                             restricting external search on shared/public servers.
+                            <strong>(Note: This works only on the native Jellyfin Android TV client)</strong>
                         </p>
                     </div>
                 </div>
@@ -104,33 +149,7 @@
                 </div>
 
 
-                <!-- External Subtitles Settings -->
-                <div
-                    style="margin-bottom: 20px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 8px; box-sizing: border-box;">
-                    <h4 style="margin-top: 0; color: #1e90ff;">External Subtitles</h4>
-                    <div style="margin-bottom: 12px;">
-                        <label style="display: flex; align-items: center; cursor: pointer;">
-                            <input id="enableExternalSubtitles" type="checkbox"
-                                style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
-                            <span style="color:#ddd; font-weight: 600;">Enable External Subtitles from Gelato</span>
-                        </label>
-                        <p style="margin: 8px 0 0 28px; font-size: 12px; color: #aaa; line-height: 1.5;">
-                            When enabled, Cavea will automatically fetch external subtitles from Gelato/Stremio and
-                            cache them permanently.
-                            Subtitles are served through Cavea's proxy to prevent Jellyfin from disposing them.
-                        </p>
-                        <div
-                            style="margin: 12px 0 0 28px; padding: 12px; background: rgba(30,144,255,0.1); border-left: 3px solid #1e90ff; border-radius: 4px;">
-                            <p style="margin: 0 0 6px 0; font-size: 12px; color: #1e90ff; font-weight: 600;">ℹ️ How It
-                                Works</p>
-                            <ul style="margin: 0; padding-left: 20px; font-size: 11px; color: #bbb; line-height: 1.6;">
-                                <li>External subtitles from Gelato are cached in Cavea's database</li>
-                                <li>Subtitles are proxied through <code>/api/cavea/subtitles/proxy</code></li>
-                                <li>Automatically fetched when you play videos</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+
 
 
 
@@ -237,93 +256,50 @@
                         </p>
                     </div>
 
-                    <div style="margin-bottom: 16px; margin-left: 28px;">
-                        <label for="reviewSource"
-                            style="display:block;margin-bottom:6px;color:#ddd;font-weight:600;">Review Source</label>
-                        <select id="reviewSource"
-                            style="width:200px;padding:6px;border-radius:4px;border:1px solid #444;background:#111;color:#fff;cursor:pointer;">
-                            <option value="tmdb">TMDB</option>
-                            <option value="trakt">Trakt</option>
-                            <option value="imdb">IMDb (via RapidAPI)</option>
+                    <div style="margin-bottom: 12px;">
+                        <label for="versionUiSelect"
+                            style="display:block;margin-bottom:6px;color:#ddd;font-weight:600;margin-left: 28px;">Version
+                            UI</label>
+                        <select id="versionUiSelect"
+                            style="width:260px;padding:6px;border-radius:4px;border:1px solid #444;background:#111;color:#fff;margin-left: 28px;">
+                            <option value="carousel">Carousel</option>
+                            <option value="dropdown">Dropdown</option>
                         </select>
-                        <p style="margin: 4px 0 0 0; font-size: 11px; color: #888;">
-                            Choose where to fetch reviews from. Ensure the corresponding API key is configured above.
+                        <p style="margin: 4px 0 0 28px; font-size: 12px; color: #999;">
+                            Choose UI for version selection.
                         </p>
-
-                        <!-- RapidAPI IMDb Help Section -->
-                        <div
-                            style="margin-top: 12px; padding: 12px; background: rgba(30,144,255,0.1); border-left: 3px solid #1e90ff; border-radius: 4px;">
-                            <p style="margin: 0 0 8px 0; font-size: 12px; color: #1e90ff; font-weight: 600;">📌 About
-                                IMDb Reviews (RapidAPI)</p>
-                            <p style="margin: 0 0 6px 0; font-size: 11px; color: #bbb;">
-                                To use IMDb reviews, you need to subscribe to the <strong>IMDb8 API</strong> on
-                                RapidAPI:
-                            </p>
-                            <ul style="margin: 6px 0 6px 16px; padding: 0; font-size: 11px; color: #bbb;">
-                                <li style="margin-bottom: 4px;">
-                                    <strong>API:</strong> <a href="https://rapidapi.com/apidojo/api/imdb8"
-                                        target="_blank" style="color: #1e90ff;">IMDb8 by ApiDojo</a>
-                                </li>
-                                <li style="margin-bottom: 4px;">
-                                    <strong>Cost:</strong> Free tier (BASIC) - $0.00/month
-                                </li>
-                                <li style="margin-bottom: 4px;">
-                                    <strong>Quota:</strong> Free tier includes sufficient requests for personal use
-                                </li>
-                                <li>
-                                    <strong>Steps:</strong> Visit the link above → Click "Subscribe" → Choose BASIC
-                                    (free) → Use your RapidAPI key above
-                                </li>
-                            </ul>
-                            <p style="margin: 6px 0 0 0; font-size: 10px; color: #999;">
-                                💡 Tip: You can also use Trakt for reviews, which doesn't require subscription (just
-                                OAuth token)
-                            </p>
-                        </div>
                     </div>
-                    </p>
+
+                    <div style="margin-bottom: 12px;">
+                        <label for="audioUiSelect"
+                            style="display:block;margin-bottom:6px;color:#ddd;font-weight:600;margin-left: 28px;">Audio
+                            UI</label>
+                        <select id="audioUiSelect"
+                            style="width:260px;padding:6px;border-radius:4px;border:1px solid #444;background:#111;color:#fff;margin-left: 28px;">
+                            <option value="carousel">Carousel</option>
+                            <option value="dropdown">Dropdown</option>
+                        </select>
+                        <p style="margin: 4px 0 0 28px; font-size: 12px; color: #999;">
+                            Choose UI for audio track selection.
+                        </p>
+                    </div>
+
+                    <div style="margin-bottom: 12px;">
+                        <label for="subtitleUiSelect"
+                            style="display:block;margin-bottom:6px;color:#ddd;font-weight:600;margin-left: 28px;">Subtitle
+                            UI</label>
+                        <select id="subtitleUiSelect"
+                            style="width:260px;padding:6px;border-radius:4px;border:1px solid #444;background:#111;color:#fff;margin-left: 28px;">
+                            <option value="carousel">Carousel</option>
+                            <option value="dropdown">Dropdown</option>
+                        </select>
+                        <p style="margin: 4px 0 0 28px; font-size: 12px; color: #999;">
+                            Choose UI for subtitle selection.
+                        </p>
+                    </div>
                 </div>
 
-                <div style="margin-bottom: 12px;">
-                    <label for="versionUiSelect"
-                        style="display:block;margin-bottom:6px;color:#ddd;font-weight:600;">Version
-                        UI</label>
-                    <select id="versionUiSelect"
-                        style="width:260px;padding:6px;border-radius:4px;border:1px solid #444;background:#111;color:#fff;">
-                        <option value="carousel">Carousel</option>
-                        <option value="dropdown">Dropdown</option>
-                    </select>
-                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #999;">
-                        Choose UI for version selection.
-                    </p>
-                </div>
 
-                <div style="margin-bottom: 12px;">
-                    <label for="audioUiSelect" style="display:block;margin-bottom:6px;color:#ddd;font-weight:600;">Audio
-                        UI</label>
-                    <select id="audioUiSelect"
-                        style="width:260px;padding:6px;border-radius:4px;border:1px solid #444;background:#111;color:#fff;">
-                        <option value="carousel">Carousel</option>
-                        <option value="dropdown">Dropdown</option>
-                    </select>
-                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #999;">
-                        Choose UI for audio track selection.
-                    </p>
-                </div>
-
-                <div style="margin-bottom: 12px;">
-                    <label for="subtitleUiSelect"
-                        style="display:block;margin-bottom:6px;color:#ddd;font-weight:600;">Subtitle
-                        UI</label>
-                    <select id="subtitleUiSelect"
-                        style="width:260px;padding:6px;border-radius:4px;border:1px solid #444;background:#111;color:#fff;">
-                        <option value="carousel">Carousel</option>
-                        <option value="dropdown">Dropdown</option>
-                    </select>
-                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #999;">
-                        Choose UI for subtitle selection.
-                    </p>
-                </div>
             </div>
 
 
@@ -466,12 +442,11 @@
                         document.getElementById('reviewSource').value = response?.reviewSource || 'tmdb';
                         document.getElementById('versionUiSelect').value = response?.versionUi || 'carousel';
                         document.getElementById('audioUiSelect').value = response?.audioUi || 'carousel';
-                        document.getElementById('audioUiSelect').value = response?.audioUi || 'carousel';
                         document.getElementById('subtitleUiSelect').value = response?.subtitleUi || 'carousel';
                         document.getElementById('catalogsMaxItems').value = response?.catalogMaxItems || 100;
                         // document.getElementById('useCaveaCache').checked = response?.useCaveaCache === true;
                         // document.getElementById('useCaveaStaging').checked = response?.useCaveaStaging !== false;
-                        document.getElementById('enableExternalSubtitles').checked = response?.enableExternalSubtitles === true;
+
 
                         // UI Injection Toggle
                         const val = response?.enableCaveaUI ?? response?.EnableCaveaUI;
@@ -497,12 +472,11 @@
                     document.getElementById('reviewSource').value = json.reviewSource || 'tmdb';
                     document.getElementById('versionUiSelect').value = json.versionUi || 'carousel';
                     document.getElementById('audioUiSelect').value = json.audioUi || 'carousel';
-                    document.getElementById('audioUiSelect').value = json.audioUi || 'carousel';
                     document.getElementById('subtitleUiSelect').value = json.subtitleUi || 'carousel';
                     document.getElementById('catalogsMaxItems').value = json.catalogMaxItems || 100;
                     // document.getElementById('useCaveaCache').checked = json.useCaveaCache === true;
                     // document.getElementById('useCaveaStaging').checked = json.useCaveaStaging !== false;
-                    document.getElementById('enableExternalSubtitles').checked = json.enableExternalSubtitles === true;
+
 
 
                     // UI Injection Toggle
@@ -536,7 +510,6 @@
                 const enableCaveaUI = document.getElementById('enableCaveaUI').checked;
                 // const useCaveaCache = document.getElementById('useCaveaCache').checked;
                 // const useCaveaStaging = document.getElementById('useCaveaStaging').checked;
-                const enableExternalSubtitles = document.getElementById('enableExternalSubtitles').checked;
 
                 const configData = {
                     tmdbApiKey: key,
@@ -551,13 +524,10 @@
                     versionUi: versionUi,
                     audioUi: audioUi,
                     subtitleUi: subtitleUi,
-                    audioUi: audioUi,
-                    subtitleUi: subtitleUi,
                     enableCaveaUI: enableCaveaUI,
                     catalogMaxItems: parseInt(document.getElementById('catalogsMaxItems').value) || 100,
                     useCaveaCache: false, // Defaulting to false as UI removed
-                    useCaveaStaging: false, // Defaulting to false as UI removed
-                    enableExternalSubtitles: enableExternalSubtitles
+                    useCaveaStaging: false // Defaulting to false as UI removed
                 };
 
                 try {

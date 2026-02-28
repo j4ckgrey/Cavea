@@ -1143,7 +1143,7 @@ namespace Cavea.Services
                         StremioId = stremioId,
                         WebCompatible = webCompat,
                         ProbedStreams = null, // Will be populated below
-                        ExternalSubtitles = null // Will be populated below
+
                     });
                 }
 
@@ -1155,17 +1155,6 @@ namespace Cavea.Services
                         stream.ProbedStreams = await GetProbedStreamsAsync(itemId, stream.StremioId);
                     }
                     
-                    // Fetch external subtitles for the item
-                    // Fetch external subtitles for the item
-                    // External subtitles are no longer cached in DB
-                    List<Cavea.Services.ExternalSubtitleInfo>? convertedSubs = null;
-                        
-                        // Add external subtitles to all streams (they're item-level, not stream-specific)
-                        foreach (var stream in streams)
-                        {
-                            stream.ExternalSubtitles = convertedSubs;
-                        }
-
 
                     _logger.LogInformation("⚪ [CaveaDb] Found {Count} cached streams for {ItemId} with probed data and subtitles", streams.Count, itemId);
                     return streams;
@@ -1752,7 +1741,7 @@ namespace Cavea.Services
         public bool? WebCompatible { get; set; }
         public string? StremioId { get; set; }
         public List<ProbedStreamInfo>? ProbedStreams { get; set; }
-        public List<Cavea.Services.ExternalSubtitleInfo>? ExternalSubtitles { get; set; }
+
     }
 
     /// <summary>
@@ -1899,17 +1888,5 @@ namespace Cavea.Services
         public int RetryCount { get; set; }
     }
 
-    /// <summary>
-    /// External subtitle info
-    /// </summary>
-    public class ExternalSubtitleInfo
-    {
-        public int Id { get; set; }
-        public string ItemId { get; set; } = string.Empty;
-        public string? SubtitleId { get; set; }
-        public string Url { get; set; } = string.Empty;
-        public string? Language { get; set; }
-        public string? Title { get; set; }
-        public DateTime CachedAt { get; set; }
-    }
+
 }

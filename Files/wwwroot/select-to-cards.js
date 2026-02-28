@@ -467,13 +467,15 @@
 	function initialize() {
 		const form = document.querySelector('form.trackSelections');
 		if (!form || form._stcInitialized) return;
-		form._stcInitialized = true;
 
 		const versionSelect = form.querySelector('select.selectSource');
 		const audioSelect = form.querySelector('select.selectAudio');
 		const subtitleSelect = form.querySelector('select.selectSubtitles');
 
 		if (!versionSelect) return;
+
+		// Ensure we only mark as initialized after we confirm the form has the selects loaded
+		form._stcInitialized = true;
 
 		// Build carousels for all selects (CSS will control visibility)
 		if (audioSelect) buildCarouselFromSelect(audioSelect, 'audio');
