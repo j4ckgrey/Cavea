@@ -260,13 +260,30 @@ namespace Cavea.Api
 
             var preferredAudio = currentUser is null ? null : GetUserStringValue(currentUser, "AudioLanguagePreference");
             var preferredSubtitle = currentUser is null ? null : GetUserStringValue(currentUser, "SubtitleLanguagePreference");
-            var selectedAudio = SelectAudioIndex(audioStreams, preferredAudio);
+            var rememberAudioSelections = currentUser is not null && GetUserBoolValue(currentUser, "RememberAudioSelections") == true;
+            var rememberSubtitleSelections = currentUser is not null && GetUserBoolValue(currentUser, "RememberSubtitleSelections") == true;
+
+            var sourceAudioIndex =
+                GetObjectIndexValue(targetSource, "AudioStreamIndex")
+                ?? GetObjectIndexValue(targetSource, "DefaultAudioStreamIndex");
+            var sourceSubtitleIndex =
+                GetObjectIndexValue(targetSource, "SubtitleStreamIndex")
+                ?? GetObjectIndexValue(targetSource, "DefaultSubtitleStreamIndex");
+
+            var selectedAudio =
+                rememberAudioSelections && sourceAudioIndex.HasValue && audioStreams.Any(a => a.Index == sourceAudioIndex.Value)
+                    ? sourceAudioIndex.Value
+                    : SelectAudioIndex(audioStreams, preferredAudio);
             foreach (var audio in audioStreams)
             {
                 audio.Selected = audio.Index == selectedAudio;
             }
 
-            var selectedSubtitle = SelectSubtitleIndex(allSubs.OfType<SubtitleTrackOption>().ToList(), preferredSubtitle);
+            var subtitleTracks = allSubs.OfType<SubtitleTrackOption>().ToList();
+            var selectedSubtitle =
+                rememberSubtitleSelections && sourceSubtitleIndex.HasValue && subtitleTracks.Any(s => s.Index == sourceSubtitleIndex.Value)
+                    ? sourceSubtitleIndex.Value
+                    : SelectSubtitleIndex(subtitleTracks, preferredSubtitle);
             foreach (var subtitle in allSubs.OfType<SubtitleTrackOption>())
             {
                 subtitle.Selected = subtitle.Index == selectedSubtitle;
@@ -318,8 +335,51 @@ namespace Cavea.Api
 
         private static string? GetUserStringValue(object user, string propertyName)
         {
-            var prop = user.GetType().GetProperty(propertyName);
-            return prop?.GetValue(user) as string;
+            return GetUserValue(user, propertyName) as string;
+        }
+
+        private static bool? GetUserBoolValue(object user, string propertyName)
+        {
+            var value = GetUserValue(user, propertyName);
+            if (value is bool boolValue)
+            {
+                return boolValue;
+            }
+
+            if (value is string stringValue && bool.TryParse(stringValue, out var parsed))
+            {
+                return parsed;
+            }
+
+            return null;
+        }
+
+        private static object? GetUserValue(object user, string propertyName)
+        {
+            var userProp = user.GetType().GetProperty(propertyName);
+            if (userProp != null)
+            {
+                return userProp.GetValue(user);
+            }
+
+            // Older/newer server builds may expose these settings on User.Configuration.
+            var configurationProp = user.GetType().GetProperty("Configuration");
+            var configuration = configurationProp?.GetValue(user);
+            var configValueProp = configuration?.GetType().GetProperty(propertyName);
+            return configValueProp?.GetValue(configuration);
+        }
+
+        private static int? GetObjectIndexValue(object source, string propertyName)
+        {
+            var prop = source.GetType().GetProperty(propertyName);
+            var value = prop?.GetValue(source);
+
+            if (value is int index)
+            {
+                return index;
+            }
+
+            return null;
         }
 
         private static int SelectAudioIndex(List<AudioTrackOption> tracks, string? preferredLanguage)
