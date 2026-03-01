@@ -17,6 +17,14 @@
 
 	let currentItemId = null;
 
+	function getTrackField(track, field) {
+		if (!track || typeof track !== 'object') return undefined;
+		if (Object.prototype.hasOwnProperty.call(track, field)) return track[field];
+		const pascal = field.charAt(0).toUpperCase() + field.slice(1);
+		if (Object.prototype.hasOwnProperty.call(track, pascal)) return track[pascal];
+		return undefined;
+	}
+
 
 	function captureItemId() {
 		const urlMatch = window.location.href.match(/[?&]id=([a-f0-9]+)/i);
@@ -73,26 +81,12 @@
 		const audioSelect = form.querySelector('select.selectAudio');
 		const subtitleSelect = form.querySelector('select.selectSubtitles');
 
-		// Clear old carousels and reset flags
-		const oldAudioCarousel = form.querySelector('#stc-carousel-audio');
-		const oldSubCarousel = form.querySelector('#stc-carousel-subtitle');
-		if (oldAudioCarousel) oldAudioCarousel.remove();
-		if (oldSubCarousel) oldSubCarousel.remove();
-		if (audioSelect) audioSelect._stcCarouselBuilt = false;
-		if (subtitleSelect) subtitleSelect._stcCarouselBuilt = false;
-
-		// Enable the selects
+		// Keep existing track UI until new data arrives to avoid first-load blank state.
 		if (audioSelect) {
 			audioSelect.disabled = false;
-			audioSelect.innerHTML = '';
-			// Rebuild empty carousel immediately
-			buildCarouselFromSelect(audioSelect, 'audio');
 		}
 		if (subtitleSelect) {
 			subtitleSelect.disabled = false;
-			subtitleSelect.innerHTML = '';
-			// Rebuild empty carousel immediately
-			buildCarouselFromSelect(subtitleSelect, 'subtitle');
 		}
 
 		// Show the containers
@@ -101,10 +95,8 @@
 		if (audioContainer) audioContainer.classList.remove('hide');
 		if (subtitleContainer) subtitleContainer.classList.remove('hide');
 
-		// Get itemId if needed
-		if (!currentItemId) {
-			captureItemId();
-		}
+		// Always re-capture itemId in SPA navigation flows.
+		captureItemId();
 
 		if (!currentItemId) {
 			console.warn('[SelectToCards] No itemId available');
@@ -126,15 +118,47 @@
 			return;
 		}
 
+		const hasUsableAudio = Array.isArray(streams.audio) && streams.audio.length > 0;
+		const hasUsableSubs = Array.isArray(streams.subs) && streams.subs.some((track) => {
+			const idx = Number(getTrackField(track, 'index'));
+			return Number.isFinite(idx) && idx >= 0;
+		});
+		if (!hasUsableAudio && !hasUsableSubs) {
+			log('No usable tracks on first fetch, retrying once for', mediaSourceId);
+			await new Promise((resolve) => setTimeout(resolve, 300));
+			streams = await fetchStreams(currentItemId, mediaSourceId);
+			if (!streams) {
+				error('Retry failed to fetch streams');
+				return;
+			}
+		}
+
 		log('Received streams:', streams);
+
+		// Now replace old track UI with the newly fetched tracks.
+		const oldAudioCarousel = form.querySelector('#stc-carousel-audio');
+		const oldSubCarousel = form.querySelector('#stc-carousel-subtitle');
+		if (oldAudioCarousel) oldAudioCarousel.remove();
+		if (oldSubCarousel) oldSubCarousel.remove();
+		if (audioSelect) {
+			audioSelect._stcCarouselBuilt = false;
+			audioSelect.innerHTML = '';
+		}
+		if (subtitleSelect) {
+			subtitleSelect._stcCarouselBuilt = false;
+			subtitleSelect.innerHTML = '';
+		}
 
 		// Populate audio tracks
 		if (audioSelect && streams.audio && streams.audio.length > 0) {
 			streams.audio.forEach((track, idx) => {
+				const index = getTrackField(track, 'index');
+				const title = getTrackField(track, 'title');
+				const selected = getTrackField(track, 'selected');
 				const option = document.createElement('option');
-				option.value = String(track.index);
-				option.textContent = track.title || `Audio ${track.index}`;
-				if (idx === 0) option.selected = true;
+				option.value = String(index);
+				option.textContent = title || `Audio ${index}`;
+				if (selected === true || (idx === 0 && !streams.audio.some((t) => getTrackField(t, 'selected') === true))) option.selected = true;
 				audioSelect.appendChild(option);
 			});
 			log('Populated', streams.audio.length, 'audio tracks');
@@ -145,10 +169,13 @@
 		// Populate subtitle tracks
 		if (subtitleSelect && streams.subs && streams.subs.length > 0) {
 			streams.subs.forEach((track, idx) => {
+				const index = getTrackField(track, 'index');
+				const title = getTrackField(track, 'title');
+				const selected = getTrackField(track, 'selected');
 				const option = document.createElement('option');
-				option.value = String(track.index);
-				option.textContent = track.title || `Subtitle ${track.index}`;
-				if (idx === 0) option.selected = true;
+				option.value = String(index);
+				option.textContent = title || `Subtitle ${index}`;
+				if (selected === true || (idx === 0 && !streams.subs.some((t) => getTrackField(t, 'selected') === true))) option.selected = true;
 				subtitleSelect.appendChild(option);
 			});
 			log('Populated', streams.subs.length, 'subtitle tracks');
@@ -431,11 +458,16 @@
 			updateActiveCard(rail, selectElement.value);
 
 			// load tracks for initial selection (version only)
-			if (type === 'version' && selectElement.value) {
-				captureItemId();
-				setTimeout(() => {
-					loadTracksForVersion(selectElement, selectElement.value);
-				}, 100);
+			if (type === 'version') {
+				if (!selectElement.value && selectElement.options.length > 0) {
+					selectElement.value = selectElement.options[0].value;
+				}
+				if (selectElement.value) {
+					captureItemId();
+					setTimeout(() => {
+						loadTracksForVersion(selectElement, selectElement.value);
+					}, 100);
+				}
 			}
 
 			// when select changes externally, sync carousel
@@ -465,7 +497,8 @@
 	}
 
 	function initialize() {
-		const form = document.querySelector('form.trackSelections');
+		const forms = Array.from(document.querySelectorAll('form.trackSelections'));
+		const form = forms.find(f => f.getClientRects && f.getClientRects().length > 0) || forms[0] || null;
 		if (!form || form._stcInitialized) return;
 
 		const versionSelect = form.querySelector('select.selectSource');
@@ -497,10 +530,7 @@
 		}
 	} function setupObserver() {
 		const observer = new MutationObserver(() => {
-			const form = document.querySelector('form.trackSelections');
-			if (form && !form._stcInitialized) {
-				initialize();
-			}
+			initialize();
 		});
 		observer.observe(document.body, { childList: true, subtree: true });
 
@@ -516,4 +546,3 @@
 
 	log('Loaded');
 })();
-
