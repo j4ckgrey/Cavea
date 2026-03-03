@@ -3,12 +3,16 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Cavea.Services;
+using Jellyfin.Data.Enums;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.MediaEncoding;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -19,6 +23,8 @@ namespace Cavea.Api
     [Produces("application/json")]
     public class StreamController : ControllerBase
     {
+        private const string GelatoStreamTag = "gelato-stream";
+
         private readonly ILogger<StreamController> _logger;
         private readonly StreamService _streamService;
 
@@ -50,12 +56,13 @@ namespace Cavea.Api
         {
             bool isWebClient = string.Equals(client, "web", StringComparison.OrdinalIgnoreCase);
             if (string.IsNullOrEmpty(itemId) || !Guid.TryParse(itemId, out var itemGuid)) return BadRequest(new { error = "Invalid itemId" });
+            bool explicitRequest = !string.IsNullOrEmpty(mediaSourceId);
 
-            var item = _libraryManager.GetItemById(itemGuid);
+            var item = ResolvePlayableItem(itemId, mediaSourceId, explicitRequest);
+
             if (item == null) return NotFound(new { error = "Item not found" });
 
             // 1. Resolve Target Source
-            bool explicitRequest = !string.IsNullOrEmpty(mediaSourceId);
             var currentUserId = ResolveCurrentUserId();
             var currentUser = currentUserId.HasValue ? _userManager.GetUserById(currentUserId.Value) : null;
 
@@ -295,6 +302,154 @@ namespace Cavea.Api
                 mediaSourceId = targetSource.Id,
                 url = targetSource.Path
             });
+        }
+
+        private BaseItem? ResolvePlayableItem(string itemId, string? mediaSourceId, bool explicitRequest)
+        {
+            // Resolve in order: primary itemId first, then mediaSourceId as an item id fallback.
+            var candidateIds = new List<string> { itemId };
+            if (explicitRequest && !string.IsNullOrWhiteSpace(mediaSourceId))
+            {
+                candidateIds.Add(mediaSourceId);
+            }
+
+            foreach (var candidateId in candidateIds)
+            {
+                var item = TryGetItemByGuidText(candidateId);
+                if (item == null)
+                {
+                    continue;
+                }
+
+                if (!string.Equals(candidateId, itemId, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(
+                        "⚪ [Cavea.Stream] Item not found for itemId={ItemId}. Falling back to mediaSourceId={MediaSourceId} as item id.",
+                        itemId,
+                        mediaSourceId
+                    );
+                }
+
+                return item;
+            }
+
+            if (!explicitRequest || string.IsNullOrWhiteSpace(mediaSourceId))
+            {
+                return null;
+            }
+
+            // Secondary fallback: mediaSourceId may carry Gelato's stable stream guid instead of BaseItem.Id.
+            var byGuid = TryGetGelatoStreamByGuid(mediaSourceId);
+            if (byGuid != null)
+            {
+                _logger.LogWarning(
+                    "⚪ [Cavea.Stream] Resolved stream by Gelato guid fallback. itemId={ItemId} mediaSourceId={MediaSourceId} resolvedId={ResolvedId}",
+                    itemId,
+                    mediaSourceId,
+                    byGuid.Id
+                );
+            }
+
+            return byGuid;
+        }
+
+        private BaseItem? TryGetItemByGuidText(string? idText)
+        {
+            if (string.IsNullOrWhiteSpace(idText) || !Guid.TryParse(idText, out var idGuid))
+            {
+                return null;
+            }
+
+            var byId = _libraryManager.GetItemById(idGuid);
+            if (byId != null)
+            {
+                return byId;
+            }
+
+            try
+            {
+                var byQuery = _libraryManager.GetItemList(new InternalItemsQuery
+                {
+                    ItemIds = [idGuid],
+                    Recursive = true,
+                    GroupByPresentationUniqueKey = false,
+                    GroupBySeriesPresentationUniqueKey = false,
+                    CollapseBoxSetItems = false
+                });
+                return byQuery.FirstOrDefault();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private BaseItem? TryGetGelatoStreamByGuid(string mediaSourceId)
+        {
+            if (!Guid.TryParse(mediaSourceId, out var targetGuid))
+            {
+                return null;
+            }
+
+            List<BaseItem> candidates;
+            try
+            {
+                candidates = _libraryManager.GetItemList(new InternalItemsQuery
+                {
+                    Recursive = true,
+                    IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode],
+                    Tags = [GelatoStreamTag],
+                    GroupByPresentationUniqueKey = false,
+                    GroupBySeriesPresentationUniqueKey = false,
+                    CollapseBoxSetItems = false
+                }).ToList();
+            }
+            catch
+            {
+                return null;
+            }
+
+            foreach (var candidate in candidates)
+            {
+                if (string.IsNullOrWhiteSpace(candidate.ExternalId))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(candidate.ExternalId);
+                    if (dict == null || !dict.TryGetValue("guid", out var guidElement))
+                    {
+                        continue;
+                    }
+
+                    Guid? guid = null;
+                    if (guidElement.ValueKind == JsonValueKind.String)
+                    {
+                        var text = guidElement.GetString();
+                        if (Guid.TryParse(text, out var parsed))
+                        {
+                            guid = parsed;
+                        }
+                    }
+                    else
+                    {
+                        guid = guidElement.Deserialize<Guid?>();
+                    }
+
+                    if (guid.HasValue && guid.Value == targetGuid)
+                    {
+                        return candidate;
+                    }
+                }
+                catch
+                {
+                    // Ignore malformed ExternalId payloads and keep scanning.
+                }
+            }
+
+            return null;
         }
 
         private Guid? ResolveCurrentUserId()
