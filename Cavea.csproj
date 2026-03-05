@@ -10,7 +10,7 @@
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
     <RuntimeIdentifier></RuntimeIdentifier>
-    <Version>0.2.0.2</Version>
+    <Version>0.2.0.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -95,4 +95,11 @@
     <!-- Embed CSS file for injection -->
     <EmbeddedResource Include="Files/wwwroot/*.css" />
   </ItemGroup>
+
+  <!-- Ensure both artwork filenames exist in publish output.
+       Some plugin views expect Cavea.png while others use thumb.png. -->
+  <Target Name="EnsurePluginImages" AfterTargets="Publish">
+    <Copy SourceFiles="Cavea.png" DestinationFiles="$(PublishDir)Cavea.png" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="Cavea.png" DestinationFiles="$(PublishDir)thumb.png" SkipUnchangedFiles="true" />
+  </Target>
 </Project>
