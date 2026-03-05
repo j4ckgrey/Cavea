@@ -77,6 +77,9 @@
 
 		const form = versionSelect.closest('form.trackSelections');
 		if (!form) return;
+		const loadSeq = (form._stcTrackLoadSeq || 0) + 1;
+		form._stcTrackLoadSeq = loadSeq;
+		const isStale = () => form._stcTrackLoadSeq !== loadSeq;
 
 		const audioSelect = form.querySelector('select.selectAudio');
 		const subtitleSelect = form.querySelector('select.selectSubtitles');
@@ -111,29 +114,50 @@
 		} else {
 			log('Cache MISS for', mediaSourceId);
 			streams = await fetchStreams(currentItemId, mediaSourceId);
+			if (isStale()) return;
 		}
 
 		if (!streams) {
-			error('Failed to fetch streams');
-			return;
+			log('Primary fetch failed, retrying without mediaSourceId for', mediaSourceId);
+			streams = await fetchStreams(currentItemId);
+			if (isStale()) return;
+			if (!streams) {
+				error('Failed to fetch streams');
+				return;
+			}
 		}
 
-		const hasUsableAudio = Array.isArray(streams.audio) && streams.audio.length > 0;
-		const hasUsableSubs = Array.isArray(streams.subs) && streams.subs.some((track) => {
+		const hasUsableAudio = (candidate) => Array.isArray(candidate?.audio) && candidate.audio.length > 0;
+		const hasUsableSubs = (candidate) => Array.isArray(candidate?.subs) && candidate.subs.some((track) => {
 			const idx = Number(getTrackField(track, 'index'));
 			return Number.isFinite(idx) && idx >= 0;
 		});
-		if (!hasUsableAudio && !hasUsableSubs) {
+		if (!hasUsableAudio(streams) && !hasUsableSubs(streams)) {
 			log('No usable tracks on first fetch, retrying once for', mediaSourceId);
 			await new Promise((resolve) => setTimeout(resolve, 300));
 			streams = await fetchStreams(currentItemId, mediaSourceId);
+			if (isStale()) return;
 			if (!streams) {
 				error('Retry failed to fetch streams');
 				return;
 			}
 		}
+		if (!hasUsableAudio(streams) && !hasUsableSubs(streams)) {
+			log('Still no usable tracks, fetching source cache once for', mediaSourceId);
+			const fallback = await fetchStreams(currentItemId);
+			if (isStale()) return;
+			if (fallback) {
+				const fromCache = fallback.cache && mediaSourceId ? fallback.cache[mediaSourceId] : null;
+				streams = fromCache || fallback;
+			}
+		}
+		if (!hasUsableAudio(streams) && !hasUsableSubs(streams)) {
+			log('No usable tracks after fallbacks; keeping existing UI for', mediaSourceId);
+			return;
+		}
 
 		log('Received streams:', streams);
+		if (isStale()) return;
 
 		// Now replace old track UI with the newly fetched tracks.
 		const oldAudioCarousel = form.querySelector('#stc-carousel-audio');
@@ -180,6 +204,13 @@
 			});
 			log('Populated', streams.subs.length, 'subtitle tracks');
 			// Build carousel for subtitles
+			setTimeout(() => buildCarouselFromSelect(subtitleSelect, 'subtitle'), 50);
+		} else if (subtitleSelect) {
+			const offOption = document.createElement('option');
+			offOption.value = '-1';
+			offOption.textContent = 'Off';
+			offOption.selected = true;
+			subtitleSelect.appendChild(offOption);
 			setTimeout(() => buildCarouselFromSelect(subtitleSelect, 'subtitle'), 50);
 		}
 	}
