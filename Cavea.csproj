@@ -62,6 +62,18 @@
     <!-- Also remove known runtime xml or config files the server will provide -->
     <Delete Files="$(PublishDir)Cavea.runtimeconfig.json" ContinueOnError="true" />
   </Target>
+
+  <!-- On non-Windows hosts, remove Windows native SQLite payloads from publish output.
+       Jellyfin scans plugin folders for .dll files and may attempt to load these native
+       binaries as managed assemblies, which disables the plugin with BadImageFormatException. -->
+  <Target Name="RemoveWindowsNativeSqlitePayloads" AfterTargets="Publish" Condition="'$(OS)' != 'Windows_NT'">
+    <ItemGroup>
+      <_NativeWinDlls Include="$(PublishDir)runtimes/win-*/native/*.dll" />
+    </ItemGroup>
+    <Delete Files="@(_NativeWinDlls)" ContinueOnError="true" />
+    <RemoveDir Directories="$(PublishDir)runtimes/win-arm/native;$(PublishDir)runtimes/win-arm64/native;$(PublishDir)runtimes/win-x86/native;$(PublishDir)runtimes/win-x64/native" ContinueOnError="true" />
+    <RemoveDir Directories="$(PublishDir)runtimes/win-arm;$(PublishDir)runtimes/win-arm64;$(PublishDir)runtimes/win-x86;$(PublishDir)runtimes/win-x64" ContinueOnError="true" />
+  </Target>
   
   <!-- Include plugin web assets and embedded config page -->
   <ItemGroup>

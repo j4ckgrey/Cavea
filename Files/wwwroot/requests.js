@@ -80,7 +80,64 @@
     // API FUNCTIONS
     // ============================================
 
+    function normalizeStatus(value) {
+        return String(value || 'pending').trim().toLowerCase();
+    }
+
+    function normalizeItemType(request) {
+        const raw = String(
+            request?.ItemType ||
+            request?.itemType ||
+            request?.itemtype ||
+            request?.TmdbMediaType ||
+            request?.tmdbMediaType ||
+            ''
+        ).trim().toLowerCase();
+
+        if (!raw) return '';
+        if (raw === 'tv' || raw === 'series' || raw === 'tvshow' || raw === 'show') return 'series';
+        if (raw === 'movie' || raw === 'film') return 'movie';
+        return raw;
+    }
+
+    function isSeriesType(itemType) {
+        return itemType === 'series' || itemType === 'tv';
+    }
+
+    function normalizeRequestImage(value) {
+        let raw = String(value || '').trim();
+        if (!raw) return '';
+
+        const m = raw.match(/^url\((.*)\)$/i);
+        if (m) raw = m[1].trim();
+
+        raw = raw.replace(/^['"]|['"]$/g, '').replace(/&amp;/g, '&');
+        if (!raw) return '';
+
+        try {
+            if (window.ApiClient && typeof window.ApiClient.accessToken === 'function') {
+                const token = window.ApiClient.accessToken();
+                if (token) {
+                    const url = new URL(raw, window.location.origin);
+                    const sameOrigin = url.origin === window.location.origin;
+                    const isItemImage = url.pathname.toLowerCase().includes('/items/');
+                    if (sameOrigin && isItemImage && !url.searchParams.has('api_key')) {
+                        url.searchParams.set('api_key', token);
+                        raw = url.toString();
+                    }
+                }
+            }
+        } catch (_) {
+            // Keep original raw value if URL parsing fails.
+        }
+
+        return `url("${raw.replace(/"/g, '%22')}")`;
+    }
+
     function normalizeRequest(r) {
+        const status = normalizeStatus(r.Status || r.status);
+        const itemType = normalizeItemType(r);
+
         return {
             Id: r.Id || r.id || r.requestId || '',
             Username: r.Username || r.username || '',
@@ -90,9 +147,10 @@
             Img: r.Img || r.img || '',
             ImdbId: r.ImdbId || r.imdbId || '',
             TmdbId: r.TmdbId || r.tmdbId || '',
-            ItemType: r.ItemType || r.itemType || r.itemtype || '',
+            ItemType: itemType,
+            TmdbMediaType: r.TmdbMediaType || r.tmdbMediaType || '',
             JellyfinId: r.JellyfinId || r.jellyfinId || '',
-            Status: r.Status || r.status || 'pending',
+            Status: status,
             ApprovedBy: r.ApprovedBy || r.approvedBy || '',
             Timestamp: r.Timestamp || r.timestamp || r.requestedAt || 0
         };
@@ -187,8 +245,9 @@
             background-position: center;
             border-radius: 6px;
             margin-bottom: 8px;
+            background-color: rgba(255,255,255,0.04);
         `;
-        imgDiv.style.backgroundImage = request.Img;
+        imgDiv.style.backgroundImage = normalizeRequestImage(request.Img);
         card.appendChild(imgDiv);
 
         if (adminView && request.Username) {
@@ -212,7 +271,8 @@
             card.appendChild(userBadge);
         }
 
-        if (request.Status === 'pending') {
+        const status = normalizeStatus(request.Status || request.status);
+        if (status === 'pending') {
             const statusBadge = document.createElement('div');
             statusBadge.className = 'request-status-badge';
             statusBadge.dataset.status = 'pending';
@@ -229,7 +289,7 @@
                 font-weight: 600;
             `;
             card.appendChild(statusBadge);
-        } else if (request.Status === 'approved') {
+        } else if (status === 'approved') {
             const statusBadge = document.createElement('div');
             statusBadge.className = 'request-status-badge';
             statusBadge.dataset.status = 'approved';
@@ -246,7 +306,7 @@
                 font-weight: 600;
             `;
             card.appendChild(statusBadge);
-        } else if (request.Status === 'rejected') {
+        } else if (status === 'rejected') {
             const statusBadge = document.createElement('div');
             statusBadge.className = 'request-status-badge';
             statusBadge.dataset.status = 'rejected';
@@ -488,8 +548,8 @@
             const normUser = (currentUsername || '').toLowerCase();
 
             // Helper to safely access properties (handles PascalCase vs camelCase checks)
-            const getStatus = (r) => r.Status || r.status;
-            const getItemType = (r) => r.ItemType || r.itemType || r.itemtype; // just in case
+            const getStatus = (r) => normalizeStatus(r.Status || r.status);
+            const getItemType = (r) => normalizeItemType(r);
             const getUsername = (r) => r.Username || r.username;
 
             // Generic filtering helper
@@ -513,8 +573,9 @@
             // Rejected requests: Admins see ALL rejected requests.
             const rejected = requests.filter(r => getStatus(r) === 'rejected');
 
-            const movies = filteredRequests.filter(r => getItemType(r) === 'movie' && getStatus(r) !== 'approved' && getStatus(r) !== 'rejected');
-            const series = filteredRequests.filter(r => (getItemType(r) === 'series' || getItemType(r) === 'tv') && getStatus(r) !== 'approved' && getStatus(r) !== 'rejected');
+            const pendingVisible = filteredRequests.filter(r => getStatus(r) !== 'approved' && getStatus(r) !== 'rejected');
+            const movies = pendingVisible.filter(r => !isSeriesType(getItemType(r)));
+            const series = pendingVisible.filter(r => isSeriesType(getItemType(r)));
 
             console.log('[Requests] Counts -> Movies:', movies.length, 'Series:', series.length, 'Approved:', approved.length, 'Rejected:', rejected.length);
 
@@ -627,7 +688,7 @@
 
             if (adminView) {
                 // For admins: count all pending requests (from any user)
-                pendingCount = requests.filter(r => r.Status === 'pending').length;
+                pendingCount = requests.filter(r => normalizeStatus(r.Status || r.status) === 'pending').length;
             } else {
                 // For regular users: count only their own pending requests
                 // Use case-insensitive check here too
@@ -805,8 +866,8 @@
             const normUser = (currentUsername || '').toLowerCase();
 
             // Helper accessors
-            const getStatus = (r) => r.Status || r.status;
-            const getItemType = (r) => r.ItemType || r.itemType || r.itemtype;
+            const getStatus = (r) => normalizeStatus(r.Status || r.status);
+            const getItemType = (r) => normalizeItemType(r);
             const getUsername = (r) => r.Username || r.username;
             const isOwner = (r) => (getUsername(r) || '').toLowerCase() === normUser;
 
@@ -821,8 +882,9 @@
             const approved = requests.filter(r => getStatus(r) === 'approved');
             const rejected = requests.filter(r => getStatus(r) === 'rejected');
 
-            const movies = filteredRequests.filter(r => getItemType(r) === 'movie' && getStatus(r) !== 'approved' && getStatus(r) !== 'rejected');
-            const series = filteredRequests.filter(r => (getItemType(r) === 'series' || getItemType(r) === 'tv') && getStatus(r) !== 'approved' && getStatus(r) !== 'rejected');
+            const pendingVisible = filteredRequests.filter(r => getStatus(r) !== 'approved' && getStatus(r) !== 'rejected');
+            const movies = pendingVisible.filter(r => !isSeriesType(getItemType(r)));
+            const series = pendingVisible.filter(r => isSeriesType(getItemType(r)));
 
             moviesContainer.innerHTML = '';
             seriesContainer.innerHTML = '';
