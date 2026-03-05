@@ -9,6 +9,15 @@
     "imageUrl": "https://raw.githubusercontent.com/j4ckgrey/Cavea/main/Cavea.png",
     "versions": [
       {
+        "version": "0.2.0.3",
+        "changelog": "Hardened track loading on version switch with stale-request guards and fallback retries. Also removes Windows native sqlite DLLs from non-Windows publish output to prevent BadImageFormat plugin disable on Linux.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/j4ckgrey/Cavea/releases/download/v0.2.0.3/Cavea_0.2.0.3.zip",
+        "checksum": "c33be9c4035fcec1d0570e9f8a851cdd",
+        "checksumType": "md5",
+        "timestamp": "2026-03-05T18:05:39Z"
+      },
+      {
         "version": "0.2.0.2",
         "changelog": "Refined Config UI, removed external subtitles, and fixed search results metadata mapping for improved reliability and field compatibility.",
         "targetAbi": "10.11.0.0",

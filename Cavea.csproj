@@ -10,7 +10,7 @@
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
     <RuntimeIdentifier></RuntimeIdentifier>
-    <Version>0.2.0.2</Version>
+    <Version>0.2.0.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
